@@ -2,12 +2,13 @@ import React from 'react'
 import { BrowserRouter, Route, Routes} from 'react-router'
 import Navbar from './Components/Navbar'
 import SignupModel from './Components/SignupModel'
-import HomePage from './pages/Home'
+import HomePage from './Pages/Home'
 import Wrapper from './Components/Wrapper'
-import Dashboard from './pages/Dashboard'
-import Register from './pages/Register'
 import ResetPassword from './Components/ResetPassword'
-import Login from './pages/Login'
+import Login from './Pages/Login'
+import Home from './Pages/Home'
+import Dashboard from './Pages/Dashboard'
+import Register from './Pages/Register'
 
 const App = () => {
   return (
