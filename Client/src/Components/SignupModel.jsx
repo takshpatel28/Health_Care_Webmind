@@ -30,7 +30,7 @@ const SignupModel = () => {
 
     // Show modal every 3 seconds (unless user is logged in or on restricted pages)
     useEffect(() => {
-        if (isLoggedIn || location.pathname === '/signup' || location.pathname === '/login' || location.pathname === "/dashboard") {
+        if (isLoggedIn || location.pathname === '/signup' || location.pathname === '/login' || location.pathname === "/dashboard" || location.pathname=== "/questioning") {
             setShowModel(false);
             return;
         }

@@ -9,6 +9,7 @@ import Login from './Pages/Login'
 import Home from './Pages/Home'
 import Dashboard from './Pages/Dashboard'
 import Register from './Pages/Register'
+import Questioning from './Pages/Questioning'
 
 const App = () => {
   return (
@@ -24,6 +25,7 @@ const App = () => {
         <Route path='/signup' element={<Register />}/>
         <Route path='/update-password' element={<ResetPassword />}/>
         <Route path='/login' element={<Login />}/>
+        <Route path='/questioning' element={<Questioning />}/>
       </Routes>
     </BrowserRouter>
   )
