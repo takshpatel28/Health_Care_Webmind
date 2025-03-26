@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { supabase } from "../helper/supabaseClient";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../helper/supabaseClient";
 
 const Login = () => {
   const [email, setEmail] = useState("");
