@@ -13,7 +13,7 @@ const Register = () => {
     bio: "",
     experienceyears: "",
     role: "Doctor",
-    gender: "Male",
+    gender: "",
   });
 
   const [loading, setLoading] = useState(false);
