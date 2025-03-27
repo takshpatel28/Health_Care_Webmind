@@ -12,7 +12,7 @@ const Register = () => {
     email: "",
     password: "",
     phonenumber: "",
-    role: "Doctor",
+    role: "",
     gender: "",
   });
 
@@ -21,8 +21,17 @@ const Register = () => {
   const [success, setSuccess] = useState("");
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (name === "role") {
+      setrole(value); // Ensures role is updated in context
+    }
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,25 +39,45 @@ const Register = () => {
     setError("");
     setSuccess("");
 
-    const { email, password, ...profileData } = formData;
-    if (!email || !password || !formData.fullname) {
-      setError("Please fill in all required fields.");
+    console.log("Form Data Before Submission:", formData); // 🔍 Debugging: Check if role exists
+
+    if (!formData.role) {
+      setError("Please select a role before proceeding.");
       setLoading(false);
       return;
     }
 
     try {
       const { data, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
+        email: formData.email,
+        password: formData.password,
       });
+
       if (authError) throw new Error(authError.message);
       if (!data?.user) throw new Error("User registration failed. Please try again.");
 
-      // ✅ Save the selected role in global context
-      setrole(formData.role);
+      const userID = data.user.id; // Get User ID from Supabase Auth
 
-      setSuccess("Registration successful! Redirecting to questions...");
+      console.log("User ID:", userID); // Debugging
+      console.log("Inserting Data:", { ...formData, id: userID });
+
+      // Insert user data into 'doctors' table
+      const { error: dbError } = await supabase.from("doctors").insert([
+        {
+          id: userID,
+          fullname: formData.fullname,
+          gender: formData.gender,
+          phonenumber: formData.phonenumber,
+          specialization: formData.specialization || null,
+          bio: formData.bio || null,
+          experienceyears: formData.experienceyears || null,
+          role: formData.role, // 🔹 Check this value in console
+        },
+      ]);
+
+      if (dbError) throw new Error(dbError.message);
+
+      setSuccess("Registration successful! Redirecting...");
       navigate("/questioning");
     } catch (err) {
       setError(err.message || "An unexpected error occurred.");
@@ -86,6 +115,7 @@ const Register = () => {
           ))}
 
           <div className="flex gap-4">
+
             <div className="w-1/2">
               <label className="block text-gray-700 font-medium">Gender</label>
               <select
@@ -100,6 +130,7 @@ const Register = () => {
                 <option value="Other">Other</option>
               </select>
             </div>
+
             <div className="w-1/2">
               <label className="block text-gray-700 font-medium">Role</label>
               <select
@@ -107,12 +138,16 @@ const Register = () => {
                 value={formData.role}
                 onChange={handleChange}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                required
               >
-                <option value="Doctor">Doctor</option>
+                <option value="">Select Role</option> {/* Ensure a default empty option */}
+                <option value="doctor">Doctor</option>
                 <option value="HOD">HOD</option>
                 <option value="Trustee">Trustee</option>
               </select>
+
             </div>
+
           </div>
 
           <button

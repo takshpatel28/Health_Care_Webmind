@@ -1,6 +1,7 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { MyContext } from "../AllContext";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../helper/supabaseClient";
 
 const Questioning = () => {
   const { role } = useContext(MyContext);
@@ -85,23 +86,58 @@ const Questioning = () => {
   ];
 
   const questions =
-    role === "Doctor"
+    role === "doctor"
       ? doctorQuestions
-      : role === "Trustee"
-      ? trusteeQuestions
-      : [];
+      : role === "trustee"
+        ? trusteeQuestions
+        : [];
 
   const [formData, setFormData] = useState({});
   const [selectedCategory, setSelectedCategory] = useState("");
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const handleSubmit = (e) => {
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Submitted data:", formData);
-    navigate("/success");
+
+    // Ensure departmentCategory is stored
+    const updatedFormData = {
+      ...formData,
+      departmentCategory: selectedCategory, // ✅ Ensure category is included
+    };
+
+    console.log("Final Form Data:", updatedFormData); // 🔍 Debugging
+
+    const { data, error } = await supabase.auth.getSession();
+
+    if (error || !data.session) {
+      console.error("Error fetching session:", error);
+      return;
+    }
+
+    const userID = data.session.user.id;
+    try {
+      const { error } = await supabase
+        .from("doctors") // Adjust table name if needed
+        .update(updatedFormData)
+        .eq("id", userID);
+
+      if (error) {
+        console.error("Error updating data:", error);
+      } else {
+        navigate("/login");
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    }
   };
 
   return (
@@ -146,14 +182,14 @@ const Questioning = () => {
                 <select
                   name="departmentCategory"
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    border: "1px solid #ccc",
+                  onChange={(e) => {
+                    setSelectedCategory(e.target.value);
+                    setFormData((prev) => ({
+                      ...prev,
+                      departmentCategory: e.target.value, // ✅ Save department category
+                    }));
                   }}
+                  required
                 >
                   <option value="">Select Category</option>
                   {Object.keys(hodDepartments).map((cat) => (
@@ -162,6 +198,7 @@ const Questioning = () => {
                     </option>
                   ))}
                 </select>
+
               </div>
 
               {selectedCategory && (
@@ -179,50 +216,20 @@ const Questioning = () => {
                   <select
                     name="department"
                     value={formData.department || ""}
-                    onChange={handleChange}
+                    onChange={handleChange} // ✅ This now updates `formData.department`
                     required
-                    style={{
-                      width: "100%",
-                      padding: "10px",
-                      borderRadius: "8px",
-                      border: "1px solid #ccc",
-                    }}
                   >
                     <option value="">Select Department</option>
-                    {hodDepartments[selectedCategory].map((dep) => (
-                      <option key={dep} value={dep}>
-                        {dep}
-                      </option>
-                    ))}
+                    {selectedCategory &&
+                      hodDepartments[selectedCategory].map((dep) => (
+                        <option key={dep} value={dep}>
+                          {dep}
+                        </option>
+                      ))}
                   </select>
+
                 </div>
               )}
-
-              <div style={{ marginBottom: "15px" }}>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "6px",
-                    fontWeight: "bold",
-                    color: "#333",
-                  }}
-                >
-                  Achievements
-                </label>
-                <textarea
-                  name="achievements"
-                  value={formData.achievements || ""}
-                  onChange={handleChange}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    border: "1px solid #ccc",
-                    resize: "vertical",
-                  }}
-                />
-              </div>
 
               <div style={{ marginBottom: "15px" }}>
                 <label
@@ -237,8 +244,8 @@ const Questioning = () => {
                 </label>
                 <input
                   type="number"
-                  name="leadershipexperience"
-                  value={formData.leadershipexperience || ""}
+                  name="experienceyears"
+                  value={formData.experienceyears || ""}
                   onChange={handleChange}
                   required
                   style={{

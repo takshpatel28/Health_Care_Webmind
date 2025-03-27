@@ -10,7 +10,6 @@ const Login = () => {
   const [resetMode, setResetMode] = useState(false);
   const navigate = useNavigate();
 
-  // Handle user login
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -39,7 +38,6 @@ const Login = () => {
     }
   };
 
-  // Handle password reset request
   const handleResetPassword = async () => {
     if (!email) {
       setMessage("Please enter your email to reset the password.");
@@ -49,11 +47,10 @@ const Login = () => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "http://localhost:5173/update-password", // Update with your frontend URL
+        redirectTo: "http://localhost:5173/update-password",
       });
 
       if (error) throw error;
-
       setMessage("Password reset email sent! Check your inbox.");
     } catch (error) {
       setMessage(error?.message || "An error occurred.");
@@ -63,81 +60,72 @@ const Login = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 border border-gray-300 rounded-md shadow-md">
-      <h1 className="text-3xl font-serif font-semibold text-center">
-        {resetMode ? "Reset Password" : "Login"}
-      </h1>
-      <br />
-      {message && <p className="text-red-500">{message}</p>}
-
-      <form onSubmit={handleSubmit} className="flex flex-col">
-        <input
-          className="border border-gray-400 p-2 rounded-md"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          type="email"
-          placeholder="Enter your email..."
-        />
-        {!resetMode && (
-          <>
-            <br />
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="w-full max-w-md p-8 bg-white shadow-md rounded-xl">
+        <h1 className="text-2xl font-bold text-center text-gray-900">
+          Sign in to your account
+        </h1>
+        <p className="text-center text-gray-500 mt-2">
+          Or <a href="/signup" className="text-blue-600 hover:underline">create a new account</a>
+        </p>
+        {message && <p className="text-red-500 text-center mt-3">{message}</p>}
+        
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div>
+            <label className="block text-gray-700">Email address</label>
             <input
-              className="border border-gray-400 p-2 rounded-md"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none mt-1"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              placeholder="Enter your email"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700">Password</label>
+            <input
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none mt-1"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type="password"
-              placeholder="Enter your password..."
+              placeholder="Enter your password"
             />
-          </> 
-        )}
-        <br />
-
-        {!resetMode ? (
-          <>
-            <button
-              className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ${
-                loading ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? "Logging in..." : "Login"}
-            </button>
-            <p
-              className="text-blue-500 cursor-pointer mt-2"
-              onClick={() => setResetMode(true)}
-            >
-              Forgot Password?
-            </p>
-          </>
-        ) : (
-          <>
-            <button
-              className={`bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ${
-                loading ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-              type="button"
-              onClick={handleResetPassword}
-              disabled={loading}
-            >
-              {loading ? "Sending email..." : "Reset Password"}
-            </button>
-            <p
-              className="text-blue-500 cursor-pointer mt-2"
-              onClick={() => setResetMode(false)}
-            >
-              Back to Login
-            </p>
-          </>
-        )}
-      </form>
-
-      <p>
-        Don't have an account?{" "}
-        <a href="/signup" className="text-blue-500 underline">
-          Register
-        </a>
-      </p>
+          </div>
+          
+          {!resetMode ? (
+            <>
+              <button
+                className={`w-full py-2 text-white font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 transition-all ${
+                  loading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? "Signing in..." : "Sign in"}
+              </button>
+              <p className="text-blue-500 text-center cursor-pointer mt-2 hover:underline">
+                Forgot your password?
+              </p>
+            </>
+          ) : (
+            <>
+              <button
+                className={`w-full py-2 text-white font-semibold rounded-lg bg-green-500 hover:bg-green-700 transition-all ${
+                  loading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                type="button"
+                onClick={handleResetPassword}
+                disabled={loading}
+              >
+                {loading ? "Sending email..." : "Reset Password"}
+              </button>
+              <p className="text-blue-500 text-center cursor-pointer mt-2 hover:underline">
+                Back to Login
+              </p>
+            </>
+          )}
+        </form>
+      </div>
     </div>
   );
 };
