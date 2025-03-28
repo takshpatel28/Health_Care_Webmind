@@ -12,6 +12,9 @@ const Register = () => {
     role: "",
     specialization: "",
     department: "",
+    gender: "",
+    bio: "",
+    experienceyears: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -45,9 +48,9 @@ const Register = () => {
       if (error) {
         setError(error.message);
       } else {
-        // Optionally, save additional user data in Supabase
+        // Save additional user data in Supabase
         const { error: insertError } = await supabase
-          .from("doctors") // Ensure you have a "profiles" table in your Supabase database
+          .from("doctors") // Ensure you have a "doctors" table in your Supabase database
           .insert({
             id: data.user.id, // User ID from Supabase
             fullname: formData.fullname,
@@ -55,6 +58,9 @@ const Register = () => {
             role: formData.role,
             specialization: formData.specialization,
             department: formData.department,
+            gender: formData.gender,
+            bio: formData.bio,
+            experienceyears: formData.experience,
           });
 
         if (insertError) {
@@ -177,67 +183,82 @@ const Register = () => {
                   onChange={handleChange}
                   required
                 />
+                <select
+                  name="gender"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
 
               <div className="space-y-3">
                 <label className="text-sm font-medium text-gray-700">Select your role</label>
                 <div className="grid grid-cols-3 gap-3">
-  {[
-    { role: "Doctor", icon: <Stethoscope className="w-5 h-5 text-blue-600" /> },
-    { role: "HOD", icon: <Building2 className="w-5 h-5 text-purple-600" /> },
-    { role: "Trustee", icon: <Users className="w-5 h-5 text-green-600" /> },
-  ].map(({ role, icon }) => (
-    <label
-      key={role}
-      className={`
-        flex items-center justify-between gap-2 cursor-pointer rounded-lg px-4 py-3 text-center font-medium text-sm border-2
-        ${formData.role === role
-          ? "bg-blue-600 text-white border-blue-600 shadow-lg"
-          : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
-        }
-        transition-all duration-200
-      `}
-    >
-      <input
-        type="radio"
-        name="role"
-        value={role}
-        onChange={handleChange}
-        className="hidden"
-      />
-      <span>{role}</span>
-      {icon}
-    </label>
-  ))}
-</div>
+                  {[
+                    { role: "Doctor", icon: <Stethoscope className="w-5 h-5 text-blue-600" /> },
+                    { role: "HOD", icon: <Building2 className="w-5 h-5 text-purple-600" /> },
+                    { role: "Trustee", icon: <Users className="w-5 h-5 text-green-600" /> },
+                  ].map(({ role, icon }) => (
+                    <label
+                      key={role}
+                      className={`
+                        flex items-center justify-between gap-2 cursor-pointer rounded-lg px-4 py-3 text-center font-medium text-sm border-2
+                        ${formData.role === role
+                          ? "bg-blue-600 text-white border-blue-600 shadow-lg"
+                          : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
+                        }
+                        transition-all duration-200                    
+                      `}
+                    >
+                      <input
+                        type="radio"
+                        name="role"
+                        value={role}
+                        onChange={handleChange}
+                        className="hidden"
+                      />
+                      <span>{role}</span>
+                      {icon}
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {formData.role === "Doctor" && (
-                <select
-                  name="specialization"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  onChange={handleChange}
-                >
-                  <option value="">Select Specialty</option>
-                  <option value="Gastroenterologist">Gastroenterologist</option>
-                  <option value="Cardiologist">Cardiologist</option>
-                  <option value="Neurologist">Neurologist</option>
-                  <option value="Pediatrician">Pediatrician</option>
-                </select>
-              )}
-
-              {formData.role === "HOD" && (
-                <select
-                  name="department"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  onChange={handleChange}
-                >
-                  <option value="">Select Department</option>
-                  <option value="Surgery">Surgery</option>
-                  <option value="Pediatrics">Pediatrics</option>
-                  <option value="Cardiology">Cardiology</option>
-                  <option value="Neurology">Neurology</option>
-                </select>
+                <>
+                  <select
+                    name="department"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Select Department</option>
+                    <option value="Surgery">Surgery</option>
+                    <option value="Pediatrics">Pediatrics</option>
+                    <option value="Cardiology">Cardiology</option>
+                    <option value="Neurology">Neurology</option>
+                  </select>
+                  <textarea
+                    name="bio"
+                    placeholder="Add your bio or achievements"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    onChange={handleChange}
+                    required
+                  />
+                  <input
+                    type="number"
+                    name="experienceyears"
+                    placeholder="Years of Experience"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    onChange={handleChange}
+                    required
+                  />
+                </>
               )}
 
               <button
