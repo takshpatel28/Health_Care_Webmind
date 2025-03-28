@@ -11,6 +11,7 @@ import Dashboard from './Pages/Dashboard'
 import Register from './Pages/Register'
 import Questioning from './Pages/Questioning'
 import Doctors from './Components/Doctors'
+import Profile from './Pages/Profile'
 
 const App = () => {
   return (
@@ -28,6 +29,7 @@ const App = () => {
         <Route path='/login' element={<Login />}/>
         <Route path='/questioning' element={<Questioning />}/>
         <Route path='/doctors' element={<Doctors />}/>
+        <Route path='/profile' element={<Profile />}/>
       </Routes>
     </BrowserRouter>
   )

@@ -250,6 +250,7 @@ const Register = () => {
           setSuccess(
             "Registration successful! Please check your email to verify your account."
           );
+          navigate("/login")
         }
       }
     } catch (err) {
