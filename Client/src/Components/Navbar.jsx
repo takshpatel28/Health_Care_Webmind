@@ -84,7 +84,7 @@ const Navbar = () => {
           </div>
         ) : (
           <div className='hidden md:block relative'>
-            <button 
+            <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className='flex items-center space-x-3 focus:outline-none cursor-pointer'
             >
@@ -109,12 +109,6 @@ const Navbar = () => {
                   </Link>
                 ) : null}
 
-                <Link to="/settings" className='block px-4 py-2 text-sm hover:bg-gray-100'>
-                  <div className='flex items-center'>
-                    <FiSettings className='mr-2' />
-                    Settings
-                  </div>
-                </Link>
                 <button
                   onClick={handleLogout}
                   className='block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100'
