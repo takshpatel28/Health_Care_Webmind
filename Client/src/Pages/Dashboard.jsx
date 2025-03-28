@@ -1,12 +1,35 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../helper/supabaseClient";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import Sidebar from "../Components/Sidebar";
 
 const Dashboard = () => {
   const [hodInfo, setHodInfo] = useState(null);
-  const [loading, setLoading] = 
-  useState(true);
+  const [doctors, setDoctors] = useState(0);
+  const [loading, setLoading] =
+    useState(true);
   const navigate = useNavigate();
+
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const response = await fetch("http://localhost:8080/api/hod");
+        if (!response.ok) throw new Error("Failed to fetch doctors");
+
+        const data = await response.json();
+        setDoctors(data.length)
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+
+
+    fetchDoctors();
+  }, []);
 
   // Fetch HOD details
   useEffect(() => {
@@ -48,12 +71,6 @@ const Dashboard = () => {
     fetchHodInfo();
   }, [navigate]);
 
-  // Logout function
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
-  };
-
   if (loading) {
     return <div className="text-center text-gray-600">Loading...</div>;
   }
@@ -61,7 +78,7 @@ const Dashboard = () => {
   return (
     <div className="flex flex-col md:flex-row">
       {/* Sidebar */}
-      <div className="w-full md:w-1/4 bg-white shadow-md p-4">
+      {/* <div className="w-full md:w-1/4 bg-white shadow-md p-4">
         <div className="flex items-center mb-6">
           <div className="text-2xl font-bold text-blue-600">DM</div>
           <div className="ml-2 text-lg">DoctorMS</div>
@@ -77,7 +94,8 @@ const Dashboard = () => {
             </li>
           </ul>
         </nav>
-      </div>
+      </div> */}
+      <Sidebar/>
 
       {/* Main Content */}
       <div className="flex-1 p-6 bg-gray-100">
@@ -97,8 +115,8 @@ const Dashboard = () => {
             <p className="text-gray-500">Experience</p>
           </div>
           <div className="bg-white p-4 shadow-md rounded">
-            <h2 className="text-lg">5 New</h2>
-            <p className="text-gray-500">Notifications</p>
+            <h2 className="text-lg">{hodInfo?.departmentCategory}</h2>
+            <p className="text-gray-500">Department Category</p>
           </div>
         </div>
 
@@ -133,12 +151,12 @@ const Dashboard = () => {
         <section className="bg-white p-4 shadow-md rounded">
           <h2 className="text-2xl font-semibold mb-4">Department Overview</h2>
           <p className="font-bold">DEPARTMENT STAFF</p>
-          <p className="text-2xl">0 Doctors</p>
-          <p className="font-bold">UPCOMING REVIEWS</p>
-          <p className="text-2xl">3 Pending</p>
-          <button className="mt-4 bg-blue-600 text-white py-2 px-4 rounded">
-            View Department Doctors &gt;
-          </button>
+          <p className="text-2xl">{doctors} Doctors</p>
+          <Link to={'/doctors'}>
+            <button className="mt-4 bg-blue-600 text-white py-2 px-4 rounded">
+              View Department Doctors &gt;
+            </button>
+          </Link>
         </section>
       </div>
     </div>
