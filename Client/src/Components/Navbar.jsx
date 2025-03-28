@@ -7,18 +7,35 @@ import { useNavigate } from "react-router-dom";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState("");  // ✅ State to store user role
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  // Check authentication state when component mounts
+  // Fetch user data and role
   useEffect(() => {
-    const checkAuth = async () => {
+    const fetchUserData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
+      if (session?.user) {
+        setUser(session.user);
+
+        // 🔹 Fetch role from "doctors" table
+        const { data, error } = await supabase
+          .from("doctors")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+        if (data) {
+          setRole(data.role); // ✅ Store role
+        }
+        if (error) {
+          console.error("Error fetching role:", error.message);
+        }
+      }
     };
 
-    checkAuth();
+    fetchUserData();
 
     // Listen for auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -31,8 +48,9 @@ const Navbar = () => {
   // Logout function
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/login')
+    navigate('/login');
     setUser(null);
+    setRole(""); // Clear role
   };
 
   return (
@@ -71,26 +89,27 @@ const Navbar = () => {
               className='flex items-center space-x-3 focus:outline-none cursor-pointer'
             >
               <img
-                src={ 'https://media.istockphoto.com/id/1337144146/vector/default-avatar-profile-icon-vector.jpg?s=612x612&w=0&k=20&c=BIbFwuv7FxTWvh5S3vB6bkT0Qv8Vn8N5Ffseq84ClGI='}
+                src={'https://media.istockphoto.com/id/1337144146/vector/default-avatar-profile-icon-vector.jpg?s=612x612&w=0&k=20&c=BIbFwuv7FxTWvh5S3vB6bkT0Qv8Vn8N5Ffseq84ClGI='}
                 alt="Profile"
                 className='w-8 h-8 rounded-full'
               />
-              <span className='font-medium'>{user.user_metadata.displayName}</span>
+              <span className='font-medium'>{user.user_metadata?.displayName || "User"}</span>
             </button>
 
             {/* Dropdown Menu */}
             {isProfileOpen && (
               <div className='absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 text-gray-800'>
-                <Link
-                  to="/dashboard"
-                  className='block px-4 py-2 text-sm hover:bg-gray-100'
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  to="/settings"
-                  className='block px-4 py-2 text-sm hover:bg-gray-100'
-                >
+                {role === "HOD" ? (
+                  <Link to="/dashboard" className='block px-4 py-2 text-sm hover:bg-gray-100'>
+                    Dashboard
+                  </Link>
+                ) : role === "Doctor" ? (
+                  <Link to="/profile" className='block px-4 py-2 text-sm hover:bg-gray-100'>
+                    Profile
+                  </Link>
+                ) : null}
+
+                <Link to="/settings" className='block px-4 py-2 text-sm hover:bg-gray-100'>
                   <div className='flex items-center'>
                     <FiSettings className='mr-2' />
                     Settings

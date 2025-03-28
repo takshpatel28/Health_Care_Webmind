@@ -15,50 +15,53 @@ const Login = () => {
     setMessage("");
 
     if (!email || !password) {
-      setMessage("Please enter both email and password.");
-      return;
+        setMessage("Please enter both email and password.");
+        return;
     }
 
     try {
-      setLoading(true);
+        setLoading(true);
 
-      // 🔹 Step 1: Authenticate User
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+        // 🔹 Step 1: Authenticate User
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
 
-      if (error) throw error;
-      if (!data || !data.user) throw new Error("Login failed. Please try again.");
+        if (error) throw error;
+        if (!data || !data.user) throw new Error("Login failed. Please try again.");
 
-      const userID = data.user.id; // ✅ Get logged-in user ID
-      console.log("Logged-in User ID:", userID);
+        const userID = data.user.id; // ✅ Get logged-in user ID
+        console.log("Logged-in User ID:", userID);
 
-      // 🔹 Step 2: Fetch All Users (Doctors Table)
-      const { data: doctors, error: fetchError } = await supabase.from("doctors").select();
+        // 🔹 Step 2: Fetch User Data from Doctors Table
+        const { data: doctor, error: fetchError } = await supabase
+            .from("doctors")
+            .select("role")
+            .eq("id", userID)
+            .single();
 
-      if (fetchError) throw fetchError;
-      if (!doctors) throw new Error("Failed to fetch users.");
+        if (fetchError) throw fetchError;
+        if (!doctor) throw new Error("User not found in the database.");
 
-      console.log("Fetched Doctors Data:", doctors);
+        console.log("User Role:", doctor.role);
 
-      // 🔹 Step 3: Check If the User is an HOD
-      const loggedInHOD = doctors.find(user => user.id === userID && user.role === "HOD");
-
-      if (loggedInHOD) {
-        console.log("HOD Found:", loggedInHOD);
-        navigate("/dashboard"); // ✅ Redirect HOD to dashboard
-      } else {
-        setMessage("Access Denied: Only HODs can access the dashboard.");
-      }
-
+        // 🔹 Step 3: Redirect Based on Role
+        if (doctor.role === "HOD") {
+            navigate("/dashboard"); // ✅ Redirect HOD to Dashboard
+        } else if (doctor.role === "Doctor") {
+            navigate("/profile"); // ✅ Redirect Doctor to Profile
+        } else {
+            setMessage("Access Denied: Unauthorized role.");
+        }
     } catch (error) {
-      setMessage(error?.message || "An error occurred.");
-      setPassword("");
+        setMessage(error?.message || "An error occurred.");
+        setPassword("");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
+
 
 
   const handleResetPassword = async () => {

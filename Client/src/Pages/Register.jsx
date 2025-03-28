@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { UserPlus, Building2, Stethoscope, Users } from "lucide-react";
 import { supabase } from "../helper/supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +15,7 @@ const Register = () => {
     department: "",
   });
 
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -42,7 +44,7 @@ const Register = () => {
         password: formData.password,
         options: {
           data: { displayName: formData.fullname } // Storing display name in user metadata
-      }
+        }
       });
 
       if (error) {
@@ -185,34 +187,34 @@ const Register = () => {
               <div className="space-y-3">
                 <label className="text-sm font-medium text-gray-700">Select your role</label>
                 <div className="grid grid-cols-3 gap-3">
-  {[
-    { role: "Doctor", icon: <Stethoscope className="w-5 h-5 text-blue-600" /> },
-    { role: "HOD", icon: <Building2 className="w-5 h-5 text-purple-600" /> },
-    { role: "Trustee", icon: <Users className="w-5 h-5 text-green-600" /> },
-  ].map(({ role, icon }) => (
-    <label
-      key={role}
-      className={`
+                  {[
+                    { role: "Doctor", icon: <Stethoscope className="w-5 h-5 text-blue-600" /> },
+                    { role: "HOD", icon: <Building2 className="w-5 h-5 text-purple-600" /> },
+                    { role: "Trustee", icon: <Users className="w-5 h-5 text-green-600" /> },
+                  ].map(({ role, icon }) => (
+                    <label
+                      key={role}
+                      className={`
         flex items-center justify-between gap-2 cursor-pointer rounded-lg px-4 py-3 text-center font-medium text-sm border-2
         ${formData.role === role
-          ? "bg-blue-600 text-white border-blue-600 shadow-lg"
-          : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
-        }
+                          ? "bg-blue-600 text-white border-blue-600 shadow-lg"
+                          : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
+                        }
         transition-all duration-200
       `}
-    >
-      <input
-        type="radio"
-        name="role"
-        value={role}
-        onChange={handleChange}
-        className="hidden"
-      />
-      <span>{role}</span>
-      {icon}
-    </label>
-  ))}
-</div>
+                    >
+                      <input
+                        type="radio"
+                        name="role"
+                        value={role}
+                        onChange={handleChange}
+                        className="hidden"
+                      />
+                      <span>{role}</span>
+                      {icon}
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {formData.role === "Doctor" && (

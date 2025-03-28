@@ -7,7 +7,6 @@ const Dashboard = () => {
   const [loading, setLoading] = 
   useState(true);
   const navigate = useNavigate();
-  console.log(hodInfo)
 
   // Fetch HOD details
   useEffect(() => {
@@ -27,7 +26,7 @@ const Dashboard = () => {
       // Fetch only HODs from the doctors table
       const { data: hodData, error: hodError } = await supabase
         .from("doctors")
-        .select("id, fullname, specialization, experienceyears, role")
+        .select()
         .eq("role", "HOD");
 
       if (hodError) {
@@ -90,7 +89,7 @@ const Dashboard = () => {
         {/* Dashboard Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="bg-white p-4 shadow-md rounded">
-            <h2 className="text-lg">{hodInfo?.specialization}</h2>
+            <h2 className="text-lg">{hodInfo?.department}</h2>
             <p className="text-gray-500">Department</p>
           </div>
           <div className="bg-white p-4 shadow-md rounded">
