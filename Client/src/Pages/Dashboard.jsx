@@ -4,8 +4,10 @@ import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const [hodInfo, setHodInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = 
+  useState(true);
   const navigate = useNavigate();
+  console.log(hodInfo)
 
   // Fetch HOD details
   useEffect(() => {
@@ -82,7 +84,7 @@ const Dashboard = () => {
       <div className="flex-1 p-6 bg-gray-100">
         <header className="mb-6">
           <h1 className="text-3xl font-bold">Welcome, {hodInfo?.fullname}</h1>
-          <p className="text-gray-500">Head of {hodInfo?.specialization} Department</p>
+          <p className="text-gray-500">Head of {hodInfo?.department} Department</p>
         </header>
 
         {/* Dashboard Cards */}

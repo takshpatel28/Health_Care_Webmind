@@ -40,6 +40,9 @@ const Register = () => {
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          data: { displayName: formData.fullname } // Storing display name in user metadata
+      }
       });
 
       if (error) {
