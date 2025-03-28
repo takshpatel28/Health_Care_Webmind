@@ -12,10 +12,10 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/hod");
+        const response = await fetch("https://health-care-webmind.onrender.com/api/hod");
         if (!response.ok) throw new Error("Failed to fetch doctors");
         const data = await response.json();
-        setDoctors(data.length);
+        setDoctors(data.doctorsData.length);
       } catch (error) {
         console.error("Error fetching doctors:", error);
       } finally {
@@ -24,6 +24,8 @@ const Dashboard = () => {
     };
     fetchDoctors();
   }, []);
+
+  console.log(doctors)
 
   useEffect(() => {
     const fetchHodInfo = async () => {
@@ -68,8 +70,8 @@ const Dashboard = () => {
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Sidebar />
-      
-      <main className="flex-1 p-6 md:p-8 lg:p-10">
+
+      <main className="flex-1 p-6 md:p-8 lg:p-10 mt-15">
         {/* Header with welcome message */}
         <header className="mb-10">
           <div className="flex items-center justify-between">
@@ -91,8 +93,8 @@ const Dashboard = () => {
         {/* Stats cards */}
         <div className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
           {[
-            { 
-              title: "Department", 
+            {
+              title: "Department",
               value: hodInfo?.department,
               icon: (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -100,8 +102,8 @@ const Dashboard = () => {
                 </svg>
               )
             },
-            { 
-              title: "Experience", 
+            {
+              title: "Experience",
               value: `${hodInfo?.experienceyears} Years`,
               icon: (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -109,8 +111,8 @@ const Dashboard = () => {
                 </svg>
               )
             },
-            { 
-              title: "Category", 
+            {
+              title: "Category",
               value: hodInfo?.departmentCategory,
               icon: (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

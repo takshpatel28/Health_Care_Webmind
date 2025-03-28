@@ -8,7 +8,7 @@ const Doctors = () => {
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/hod");
+        const response = await fetch("https://health-care-webmind.onrender.com/api/hod");
         if (!response.ok) throw new Error("Failed to fetch doctors");
 
         const data = await response.json();

@@ -73,7 +73,7 @@ const Navbar = () => {
           <div className='hidden md:flex items-center space-x-1'>
             <NavLink to="/" icon={<FiHome />} text="Home" />
             <NavLink to="/services" icon={<FiActivity />} text="Services" />
-            <NavLink to="/doctors" icon={<FiUsers />} text="Doctors" />
+            <NavLink to="/doctor" icon={<FiUsers />} text="Doctors" />
             <NavLink to="/about" icon={<FiInfo />} text="About" />
           </div>
 
@@ -81,14 +81,14 @@ const Navbar = () => {
           <div className='flex items-center space-x-4'>
             {!user ? (
               <>
-                <Link 
-                  to="/login" 
+                <Link
+                  to="/login"
                   className='hidden md:block px-4 py-2 text-sm font-medium text-white hover:text-blue-300 transition-colors duration-300'
                 >
                   Login
                 </Link>
-                <Link 
-                  to="/signup" 
+                <Link
+                  to="/signup"
                   className='hidden md:block px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-sm font-medium text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:from-blue-600 hover:to-purple-700'
                 >
                   Sign Up
@@ -141,8 +141,8 @@ const Navbar = () => {
             )}
 
             {/* Mobile Menu Button */}
-            <button 
-              onClick={() => setIsOpen(!isOpen)} 
+            <button
+              onClick={() => setIsOpen(!isOpen)}
               className='md:hidden text-white p-2 rounded-lg hover:bg-gray-700 focus:outline-none transition-colors duration-300'
             >
               {isOpen ? <FiX size={24} /> : <FiMenu size={24} />}
@@ -157,17 +157,17 @@ const Navbar = () => {
             <MobileNavLink to="/services" icon={<FiActivity />} text="Services" />
             <MobileNavLink to="/doctors" icon={<FiUsers />} text="Doctors" />
             <MobileNavLink to="/about" icon={<FiInfo />} text="About" />
-            
+
             {!user ? (
               <div className='flex flex-col space-y-3 pt-4'>
-                <Link 
-                  to="/login" 
+                <Link
+                  to="/login"
                   className='w-full px-4 py-3 text-center bg-gray-700 rounded-lg text-white font-medium hover:bg-gray-600 transition-colors duration-300'
                 >
                   Login
                 </Link>
-                <Link 
-                  to="/signup" 
+                <Link
+                  to="/signup"
                   className='w-full px-4 py-3 text-center bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg text-white font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300'
                 >
                   Sign Up
@@ -191,8 +191,8 @@ const Navbar = () => {
 
 // Reusable NavLink component for desktop
 const NavLink = ({ to, icon, text }) => (
-  <Link 
-    to={to} 
+  <Link
+    to={to}
     className="flex items-center px-4 py-2 text-sm font-medium text-gray-300 hover:text-white rounded-lg group transition-colors duration-300"
   >
     <span className="mr-2 opacity-70 group-hover:opacity-100 transition-opacity duration-300">
@@ -205,8 +205,8 @@ const NavLink = ({ to, icon, text }) => (
 
 // Reusable MobileNavLink component
 const MobileNavLink = ({ to, icon, text }) => (
-  <Link 
-    to={to} 
+  <Link
+    to={to}
     className="flex items-center px-4 py-3 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors duration-300"
     onClick={() => setIsOpen(false)}
   >
@@ -219,8 +219,8 @@ const MobileNavLink = ({ to, icon, text }) => (
 
 // Reusable DropdownLink component
 const DropdownLink = ({ to, icon, text }) => (
-  <Link 
-    to={to} 
+  <Link
+    to={to}
     className="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200"
     onClick={() => setIsProfileOpen(false)}
   >
