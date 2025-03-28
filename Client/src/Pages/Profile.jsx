@@ -7,6 +7,8 @@ const Profile = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    password: '',
+    confirmPassword: '',
     phoneNumber: '',
     role: 'doctor',
     specialization: '',
@@ -28,7 +30,7 @@ const Profile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data, error } = await supabase
-          .from('profiles')
+          .from('doctors')
           .select('*')
           .eq('id', user.id)
           .single();
@@ -89,7 +91,7 @@ const Profile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { error } = await supabase
-          .from('profiles')
+          .from('doctors')
           .upsert({
             id: user.id,
             ...formData,
@@ -107,151 +109,144 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+    <div className="min-h-screen bg-gray-900 text-white py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        {/* Cover Photo */}
+        <div className="relative h-48 bg-blue-600">
+          <button
+            className="absolute top-4 right-4 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition"
+            onClick={() => setIsEditing(!isEditing)}
+          >
+            {isEditing ? 'Cancel' : 'Edit Profile'}
+          </button>
+        </div>
+
+        {/* Profile Section */}
         <div className="p-8">
-          {/* Header Section */}
-          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">Doctor Profile</h1>
-            <button
-              onClick={() => setIsEditing(!isEditing)}
-              className="mt-4 md:mt-0 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {isEditing ? 'Cancel' : 'Edit Profile'}
-            </button>
+          <div className="flex flex-col md:flex-row items-center md:items-start">
+            {/* Profile Image */}
+            <div className="relative">
+              <img
+                src={profileImage || 'https://via.placeholder.com/150'}
+                alt="Profile"
+                className="w-32 h-32 rounded-full object-cover border-4 border-gray-700 shadow-md"
+              />
+              {isEditing && (
+                <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </label>
+              )}
+            </div>
+
+            {/* Profile Info */}
+            <div className="mt-6 md:mt-0 md:ml-8">
+              <h1 className="text-2xl font-bold">{formData.fullName || 'Doctor Name'}</h1>
+              <p className="text-gray-400">@{formData.role}</p>
+              <p className="mt-2">{formData.bio || 'Add a bio to describe yourself.'}</p>
+            </div>
           </div>
 
           {/* Profile Form */}
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Profile Image */}
-            <div className="flex flex-col items-center">
-              <div className="relative">
-                <img
-                  src={profileImage || 'https://via.placeholder.com/150'}
-                  alt="Profile"
-                  className="w-40 h-40 rounded-full object-cover border-4 border-gray-200 shadow-md"
+          {isEditing && (
+            <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputField
+                  label="Full Name"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
                 />
-                {isEditing && (
-                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  </label>
-                )}
+                <InputField
+                  label="Email"
+                  name="email"
+                  value={formData.email}
+                  disabled
+                />
+                <InputField
+                  label="Phone Number"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                />
+                <InputField
+                  label="Specialization"
+                  name="specialization"
+                  value={formData.specialization}
+                  onChange={handleInputChange}
+                />
+                <InputField
+                  label="Department"
+                  name="department"
+                  value={formData.department}
+                  onChange={handleInputChange}
+                />
+                <InputField
+                  label="Department Category"
+                  name="departmentCategory"
+                  value={formData.departmentCategory}
+                  onChange={handleInputChange}
+                />
+                <SelectField
+                  label="Gender"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  options={[
+                    { value: '', label: 'Select Gender' },
+                    { value: 'male', label: 'Male' },
+                    { value: 'female', label: 'Female' },
+                    { value: 'other', label: 'Other' },
+                  ]}
+                />
+                <InputField
+                  label="Years of Experience"
+                  name="experienceYears"
+                  type="number"
+                  value={formData.experienceYears}
+                  onChange={handleInputChange}
+                />
               </div>
-              <p className="mt-4 text-gray-600 text-sm">
-                {isEditing ? 'Click the icon to upload a new profile image' : ''}
-              </p>
-            </div>
 
-            {/* Form Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputField
-                label="Full Name"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-              />
-              <InputField
-                label="Email"
-                name="email"
-                value={formData.email}
-                disabled
-              />
-              <InputField
-                label="Phone Number"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-              />
-              <InputField
-                label="Specialization"
-                name="specialization"
-                value={formData.specialization}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-              />
-              <InputField
-                label="Department"
-                name="department"
-                value={formData.department}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-              />
-              <InputField
-                label="Department Category"
-                name="departmentCategory"
-                value={formData.departmentCategory}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-              />
-              <SelectField
-                label="Gender"
-                name="gender"
-                value={formData.gender}
-                onChange={handleInputChange}
-                options={[
-                  { value: '', label: 'Select Gender' },
-                  { value: 'male', label: 'Male' },
-                  { value: 'female', label: 'Female' },
-                  { value: 'other', label: 'Other' },
-                ]}
-                disabled={!isEditing}
-              />
-              <InputField
-                label="Years of Experience"
-                name="experienceYears"
-                type="number"
-                value={formData.experienceYears}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400">Bio</label>
+                <textarea
+                  name="bio"
+                  value={formData.bio}
+                  onChange={handleInputChange}
+                  rows="4"
+                  className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                ></textarea>
+              </div>
 
-            {/* Bio Section */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Bio</label>
-              <textarea
-                name="bio"
-                value={formData.bio}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                rows="4"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              ></textarea>
-            </div>
-
-            {/* Save Button */}
-            {isEditing && (
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                 >
                   Save Changes
                 </button>
               </div>
-            )}
-          </form>
+            </form>
+          )}
         </div>
       </div>
     </div>
@@ -261,15 +256,15 @@ const Profile = () => {
 // Reusable InputField Component
 const InputField = ({ label, name, value, onChange, disabled, type = 'text' }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700">{label}</label>
+    <label className="block text-sm font-medium text-gray-400">{label}</label>
     <input
       type={type}
       name={name}
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm ${
-        disabled ? 'bg-gray-50' : 'focus:border-blue-500 focus:ring-blue-500'
+      className={`mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white shadow-sm ${
+        disabled ? 'bg-gray-800' : 'focus:border-blue-500 focus:ring-blue-500'
       }`}
     />
   </div>
@@ -278,14 +273,14 @@ const InputField = ({ label, name, value, onChange, disabled, type = 'text' }) =
 // Reusable SelectField Component
 const SelectField = ({ label, name, value, onChange, options, disabled }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700">{label}</label>
+    <label className="block text-sm font-medium text-gray-400">{label}</label>
     <select
       name={name}
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm ${
-        disabled ? 'bg-gray-50' : 'focus:border-blue-500 focus:ring-blue-500'
+      className={`mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white shadow-sm ${
+        disabled ? 'bg-gray-800' : 'focus:border-blue-500 focus:ring-blue-500'
       }`}
     >
       {options.map((option) => (
