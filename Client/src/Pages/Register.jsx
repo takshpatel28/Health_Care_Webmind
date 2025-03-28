@@ -97,6 +97,102 @@ const Register = () => {
     ],
   };
 
+  const doctorsfordepartment = {
+    "General Medicine & Primary Care": [
+      "General Physician – Treats common illnesses, chronic diseases, and provides primary healthcare.",
+      "Family Medicine – Provides ongoing care for individuals and families across all ages.",
+    ],
+    "Surgical Departments": [
+      "General Surgery – Performs surgeries on the digestive tract, skin, soft tissues, and more.",
+      "Cardiothoracic Surgery – Specializes in heart and lung surgeries.",
+      "Neurosurgery – Treats brain, spine, and nervous system disorders through surgery.",
+      "Plastic Surgery – Focuses on reconstructive and cosmetic surgeries.",
+      "Orthopedic Surgery – Specializes in bone, joint, and ligament surgeries.",
+      "Urology – Deals with urinary tract and male reproductive system surgeries.",
+      "Otolaryngology (ENT Surgery) – Treats ear, nose, and throat disorders.",
+      "Ophthalmology (Eye Surgery) – Specializes in eye surgeries.",
+    ],
+    "Cardiology & Vascular Medicine": [
+      "Cardiologist – Diagnoses and treats heart diseases.",
+      "Interventional Cardiology – Performs minimally invasive heart procedures.",
+      "Vascular Surgeon – Specializes in blood vessels and circulatory system surgeries.",
+    ],
+    "Neurology & Neurosciences": [
+      "Neurologist – Diagnoses and treats brain and nervous system disorders.",
+      "Pediatric Neurologist – Specializes in neurological issues in children.",
+    ],
+    "Gastroenterology & Hepatology": [
+      "Gastroenterologist – Treats digestive system disorders.",
+      "Hepatologist – Specializes in liver, pancreas, and gallbladder diseases.",
+    ],
+    "Pulmonology & Respiratory Medicine": [
+      "Pulmonologist – Treats lung diseases and respiratory disorders.",
+    ],
+    "Endocrinology & Diabetes": [
+      "Endocrinologist – Specializes in hormone-related diseases, including diabetes and thyroid disorders.",
+    ],
+    "Nephrology & Kidney Care": [
+      "Nephrologist – Treats kidney diseases and dialysis patients.",
+    ],
+    "Hematology & Oncology": [
+      "Hematologist – Specializes in blood disorders.",
+      "Oncologist – Diagnoses and treats cancer.",
+    ],
+    "Rheumatology & Autoimmune Disorders": [
+      "Rheumatologist – Treats arthritis and autoimmune diseases.",
+    ],
+    "Dermatology & Venereology": [
+      "Dermatologist – Treats skin, hair, and nail disorders.",
+      "Venereologist – Specializes in sexually transmitted infections (STIs).",
+    ],
+    "Obstetrics & Gynecology": [
+      "Gynecologist – Treats female reproductive health issues.",
+      "Obstetrician – Specializes in pregnancy, childbirth, and postpartum care.",
+    ],
+    "Pediatrics & Neonatology": [
+      "Pediatrician – Treats children’s illnesses and developmental issues.",
+      "Neonatologist – Specializes in newborn and premature infant care.",
+    ],
+    "Geriatrics & Elderly Care": [
+      "Geriatrician – Specializes in healthcare for the elderly.",
+    ],
+    "Psychiatry & Mental Health": [
+      "Psychiatrist – Diagnoses and treats mental health disorders.",
+      "Clinical Psychologist – Provides therapy and mental health counseling.",
+    ],
+    "Pain Management & Anesthesiology": [
+      "Anesthesiologist – Manages anesthesia during surgeries.",
+      "Pain Management Specialist – Treats chronic pain conditions.",
+    ],
+    "Emergency & Critical Care": [
+      "Emergency Medicine Specialist – Provides urgent medical care.",
+      "Intensivist (Critical Care Specialist) – Treats patients in ICU.",
+    ],
+    "Physical Medicine & Rehabilitation": [
+      "Physiatrist – Specializes in rehabilitation after injuries or surgeries.",
+    ],
+    "Sports Medicine & Orthopedics": [
+      "Sports Medicine Specialist – Treats sports-related injuries and performance issues.",
+    ],
+    "Ophthalmology (Eye Care)": [
+      "Ophthalmologist – Treats eye diseases and performs surgeries.",
+      "Optometrist – Conducts eye exams and prescribes glasses/lenses.",
+    ],
+    "Otolaryngology (ENT – Ear, Nose, Throat)": [
+      "ENT Specialist – Treats disorders of the ear, nose, and throat.",
+    ],
+    "Dentistry & Oral Health": [
+      "Dentist – Provides general oral healthcare.",
+      "Orthodontist – Specializes in teeth alignment and braces.",
+      "Periodontist – Treats gum diseases.",
+      "Oral & Maxillofacial Surgeon – Performs surgeries on the mouth, jaw, and face.",
+    ],
+    "Immunology & Allergy": [
+      "Immunologist – Diagnoses and treats immune system disorders.",
+      "Allergist – Specializes in allergies and hypersensitivities.",
+    ],
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -348,6 +444,7 @@ const Register = () => {
 
               {formData.role === "Doctor" && (
                 <>
+                  {/* Department Dropdown */}
                   <select
                     name="department"
                     className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
@@ -355,11 +452,33 @@ const Register = () => {
                     required
                   >
                     <option value="">Select Department</option>
-                    <option value="Surgery">Surgery</option>
-                    <option value="Pediatrics">Pediatrics</option>
-                    <option value="Cardiology">Cardiology</option>
-                    <option value="Neurology">Neurology</option>
+                    {Object.keys(doctorsfordepartment).map((department) => (
+                      <option key={department} value={department}>
+                        {department}
+                      </option>
+                    ))}
                   </select>
+
+                  {/* Specialization Dropdown */}
+                  {formData.department && (
+                    <select
+                      name="specialization"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Select Specialization</option>
+                      {doctorsfordepartment[formData.department]?.map(
+                        (specialization) => (
+                          <option key={specialization} value={specialization}>
+                            {specialization}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  )}
+
+                  {/* Bio Textarea */}
                   <textarea
                     name="bio"
                     placeholder="Add your bio or achievements"
@@ -367,6 +486,8 @@ const Register = () => {
                     onChange={handleChange}
                     required
                   />
+
+                  {/* Experience Input */}
                   <input
                     type="number"
                     name="experienceyears"
@@ -378,41 +499,43 @@ const Register = () => {
                 </>
               )}
 
-{formData.role === "HOD" && (
-  <>
-    {/* Department Category Dropdown */}
-    <select
-      name="departmentCategory"
-      className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-      onChange={handleChange}
-      required
-    >
-      <option value="">Select HOD Department Category</option>
-      {Object.keys(departmentOptions).map((category) => (
-        <option key={category} value={category}>
-          {category}
-        </option>
-      ))}
-    </select>
+              {formData.role === "HOD" && (
+                <>
+                  {/* Department Category Dropdown */}
+                  <select
+                    name="departmentCategory"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Select HOD Department Category</option>
+                    {Object.keys(departmentOptions).map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
 
-    {/* Department Dropdown */}
-    {formData.departmentCategory && (
-      <select
-        name="department"
-        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-        onChange={handleChange}
-        required
-      >
-        <option value="">Select Department</option>
-        {departmentOptions[formData.departmentCategory]?.map((department) => (
-          <option key={department} value={department}>
-            {department}
-          </option>
-        ))}
-      </select>
-    )}
-  </>
-)}
+                  {/* Department Dropdown */}
+                  {formData.departmentCategory && (
+                    <select
+                      name="department"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Select Department</option>
+                      {departmentOptions[formData.departmentCategory]?.map(
+                        (department) => (
+                          <option key={department} value={department}>
+                            {department}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  )}
+                </>
+              )}
 
               <button
                 type="submit"

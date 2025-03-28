@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FiMenu, FiX, FiSettings } from 'react-icons/fi';
 import { supabase } from '../helper/supabaseClient';
 import { useNavigate } from "react-router-dom";
+import Logo from '../assets/logo.png'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -57,7 +58,7 @@ const Navbar = () => {
     <nav className='bg-gray-800 p-4 text-white'>
       <div className='container mx-auto flex justify-between items-center'>
         {/* Logo */}
-        <div className='text-2xl font-bold'>LOGO</div>
+        <div className='text-2xl font-bold'><img src={Logo} alt="Logo" className='w-12'/></div>
 
         {/* Mobile Menu Button */}
         <div className='md:hidden'>
