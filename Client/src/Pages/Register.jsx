@@ -251,7 +251,7 @@ const Register = () => {
             "Registration successful! Please check your email to verify your account."
           );
           setTimeout(() => {
-            navigate("/login")
+            navigate("/login");
           }, 2000);
         }
       }
@@ -537,6 +537,14 @@ const Register = () => {
                       )}
                     </select>
                   )}
+                  <input
+                    type="number"
+                    name="experienceyears"
+                    placeholder="Years of Experience"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    onChange={handleChange}
+                    required
+                  />
                 </>
               )}
 
