@@ -9,6 +9,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -55,6 +56,27 @@ const Login = () => {
     } catch (error) {
       setMessage(error?.message || "An error occurred.");
       setPassword("");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setMessage("Please enter your email to reset the password.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: "http://localhost:5173/update-password",
+      });
+
+      if (error) throw error;
+      setMessage("Password reset email sent! Check your inbox.");
+    } catch (error) {
+      setMessage(error?.message || "An error occurred.");
     } finally {
       setLoading(false);
     }
@@ -165,24 +187,37 @@ const Login = () => {
                   </button>
                 </div>
                 <div className="flex justify-end mt-1">
-                  <a
-                    href="/forgot-password"
-                    className="text-sm text-blue-600 hover:text-blue-500"
+                  <p
+                    onClick={() => setResetMode(true)}
+                    className="text-sm text-blue-600 hover:text-blue-500 cursor-pointer"
                   >
                     Forgot password?
-                  </a>
+                  </p>
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  loading ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-                disabled={loading}
-              >
-                {loading ? "Signing in..." : "Sign In"}
-              </button>
+              {!resetMode ? (
+                <button
+                  type="submit"
+                  className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    loading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={loading}
+                >
+                  {loading ? "Signing in..." : "Sign In"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResetPassword}
+                  className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-500 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
+                    loading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={loading}
+                >
+                  {loading ? "Sending email..." : "Reset Password"}
+                </button>
+              )}
             </form>
 
             <p className="mt-6 text-center text-sm text-gray-500">
