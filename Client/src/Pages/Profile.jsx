@@ -7,8 +7,6 @@ const Profile = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    password: '',
-    confirmPassword: '',
     phoneNumber: '',
     role: 'doctor',
     specialization: '',
@@ -109,39 +107,58 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
         <div className="p-8">
           {/* Header Section */}
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Doctor Profile</h1>
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800">Doctor Profile</h1>
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="mt-4 md:mt-0 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               {isEditing ? 'Cancel' : 'Edit Profile'}
             </button>
           </div>
 
           {/* Profile Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-8">
             {/* Profile Image */}
-            <div className="flex items-center space-x-6">
+            <div className="flex flex-col items-center">
               <div className="relative">
                 <img
                   src={profileImage || 'https://via.placeholder.com/150'}
                   alt="Profile"
-                  className="w-32 h-32 rounded-full object-cover"
+                  className="w-40 h-40 rounded-full object-cover border-4 border-gray-200 shadow-md"
                 />
                 {isEditing && (
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
+                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </label>
                 )}
               </div>
+              <p className="mt-4 text-gray-600 text-sm">
+                {isEditing ? 'Click the icon to upload a new profile image' : ''}
+              </p>
             </div>
 
             {/* Form Fields */}
@@ -159,24 +176,6 @@ const Profile = () => {
                 value={formData.email}
                 disabled
               />
-              {isEditing && (
-                <>
-                  <InputField
-                    label="New Password"
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                  />
-                  <InputField
-                    label="Confirm Password"
-                    name="confirmPassword"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                  />
-                </>
-              )}
               <InputField
                 label="Phone Number"
                 name="phoneNumber"
@@ -246,7 +245,7 @@ const Profile = () => {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   Save Changes
                 </button>
