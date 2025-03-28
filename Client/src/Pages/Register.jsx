@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UserPlus, Building2, Stethoscope, Users } from "lucide-react";
+import { UserPlus, Building2, Stethoscope, Users, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../helper/supabaseClient";
 
@@ -23,79 +23,82 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [activeAccordion, setActiveAccordion] = useState(null);
 
+  // Department options remain the same
   const departmentOptions = {
-    "Medical Departments (Clinical)": [
-      "Cardiology (Heart & Vascular Care)",
-      "Neurology (Brain & Nervous System)",
-      "Neurosurgery (Surgical Neurology)",
-      "Orthopedics (Bone & Joint Care)",
-      "General Surgery (All Types of Surgery)",
-      "Internal Medicine (General Physician Care)",
-      "Pulmonology (Lung & Respiratory Care)",
-      "Gastroenterology (Digestive System Care)",
-      "Endocrinology (Diabetes & Hormonal Disorders)",
-      "Nephrology (Kidney Care)",
-      "Hematology (Blood Disorders)",
-      "Oncology (Cancer Care)",
-      "Radiology (Medical Imaging & Diagnostics)",
-      "Dermatology (Skin, Hair & Nails)",
-      "Ophthalmology (Eye Care)",
-      "Otolaryngology (ENT) (Ear, Nose & Throat)",
-      "Rheumatology (Joint & Autoimmune Diseases)",
-      "Pediatrics (Children’s Health)",
-      "Geriatrics (Elderly Care)",
-      "Psychiatry & Mental Health (Mental Disorders & Counseling)",
-      "Urology (Urinary & Male Reproductive Health)",
-      "Obstetrics & Gynecology (OB-GYN) (Women’s Health & Maternity Care)",
-      "Anesthesiology (Pain Management & Surgery Preparation)",
-      "Emergency Medicine (Emergency & Trauma Care)",
-    ],
-    "Surgical Departments": [
-      "General Surgery (Broad Surgical Treatments)",
-      "Cardiac Surgery (Heart Surgery)",
-      "Neurosurgery (Brain & Spine Surgery)",
-      "Orthopedic Surgery (Bone & Joint Surgery)",
-      "Plastic & Reconstructive Surgery",
-      "ENT Surgery",
-      "Pediatric Surgery",
-      "Urology Surgery",
-      "Ophthalmic Surgery (Eye Surgery)",
-      "Gynecologic Surgery",
-    ],
-    "Diagnostic & Laboratory Departments": [
-      "Radiology (MRI, CT Scan, X-rays)",
-      "Pathology (Lab Tests & Disease Diagnosis)",
-      "Microbiology (Infectious Disease Testing)",
-      "Biochemistry (Blood & Chemical Analysis)",
-      "Genetics (Genetic Testing & Counseling)",
-    ],
-    "Support & Allied Health Departments": [
-      "Physiotherapy & Rehabilitation",
-      "Occupational Therapy",
-      "Speech Therapy",
-      "Dietetics & Nutrition",
-      "Pharmacy",
-      "Blood Bank",
-    ],
-    "Administrative & Management Departments": [
-      "Hospital Administration",
-      "Human Resources (HR)",
-      "Finance & Billing",
-      "Medical Records & Health Information Management",
-      "Quality & Compliance",
-      "Infection Control",
-      "Supply Chain & Procurement",
-      "IT & Health Informatics",
-    ],
-    "Emergency & Specialized Units": [
-      "Emergency Department (ER)",
-      "Intensive Care Unit (ICU)",
-      "Neonatal Intensive Care Unit (NICU)",
-      "Burn Unit",
-      "Dialysis Unit",
-    ],
-  };
+        "Medical Departments (Clinical)": [
+          "Cardiology (Heart & Vascular Care)",
+          "Neurology (Brain & Nervous System)",
+          "Neurosurgery (Surgical Neurology)",
+          "Orthopedics (Bone & Joint Care)",
+          "General Surgery (All Types of Surgery)",
+          "Internal Medicine (General Physician Care)",
+          "Pulmonology (Lung & Respiratory Care)",
+          "Gastroenterology (Digestive System Care)",
+          "Endocrinology (Diabetes & Hormonal Disorders)",
+          "Nephrology (Kidney Care)",
+          "Hematology (Blood Disorders)",
+          "Oncology (Cancer Care)",
+          "Radiology (Medical Imaging & Diagnostics)",
+          "Dermatology (Skin, Hair & Nails)",
+          "Ophthalmology (Eye Care)",
+          "Otolaryngology (ENT) (Ear, Nose & Throat)",
+          "Rheumatology (Joint & Autoimmune Diseases)",
+          "Pediatrics (Children’s Health)",
+          "Geriatrics (Elderly Care)",
+          "Psychiatry & Mental Health (Mental Disorders & Counseling)",
+          "Urology (Urinary & Male Reproductive Health)",
+          "Obstetrics & Gynecology (OB-GYN) (Women’s Health & Maternity Care)",
+          "Anesthesiology (Pain Management & Surgery Preparation)",
+          "Emergency Medicine (Emergency & Trauma Care)",
+        ],
+        "Surgical Departments": [
+          "General Surgery (Broad Surgical Treatments)",
+          "Cardiac Surgery (Heart Surgery)",
+          "Neurosurgery (Brain & Spine Surgery)",
+          "Orthopedic Surgery (Bone & Joint Surgery)",
+          "Plastic & Reconstructive Surgery",
+          "ENT Surgery",
+          "Pediatric Surgery",
+          "Urology Surgery",
+          "Ophthalmic Surgery (Eye Surgery)",
+          "Gynecologic Surgery",
+        ],
+        "Diagnostic & Laboratory Departments": [
+          "Radiology (MRI, CT Scan, X-rays)",
+          "Pathology (Lab Tests & Disease Diagnosis)",
+          "Microbiology (Infectious Disease Testing)",
+          "Biochemistry (Blood & Chemical Analysis)",
+          "Genetics (Genetic Testing & Counseling)",
+        ],
+        "Support & Allied Health Departments": [
+          "Physiotherapy & Rehabilitation",
+          "Occupational Therapy",
+          "Speech Therapy",
+          "Dietetics & Nutrition",
+          "Pharmacy",
+          "Blood Bank",
+        ],
+        "Administrative & Management Departments": [
+          "Hospital Administration",
+          "Human Resources (HR)",
+          "Finance & Billing",
+          "Medical Records & Health Information Management",
+          "Quality & Compliance",
+          "Infection Control",
+          "Supply Chain & Procurement",
+          "IT & Health Informatics",
+        ],
+        "Emergency & Specialized Units": [
+          "Emergency Department (ER)",
+          "Intensive Care Unit (ICU)",
+          "Neonatal Intensive Care Unit (NICU)",
+          "Burn Unit",
+          "Dialysis Unit",
+        ],
+      };
+
 
   const doctorsfordepartment = {
     "General Medicine & Primary Care": [
@@ -198,6 +201,10 @@ const Register = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const toggleAccordion = (index) => {
+    setActiveAccordion(activeAccordion === index ? null : index);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -211,45 +218,40 @@ const Register = () => {
     }
 
     try {
-      // Convert experienceyears to a number or set to null if empty
       const experienceYears = formData.experienceyears
         ? parseInt(formData.experienceyears, 10)
         : null;
 
-      // Supabase sign-up
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          data: { displayName: formData.fullname }, // Storing display name in user metadata
+          data: { displayName: formData.fullname },
         },
       });
 
       if (error) {
         setError(error.message);
       } else {
-        // Save additional user data in Supabase
         const { error: insertError } = await supabase
-          .from("doctors") // Ensure you have a "doctors" table in your Supabase database
+          .from("doctors")
           .insert({
-            id: data.user.id, // User ID from Supabase
+            id: data.user.id,
             fullname: formData.fullname,
-            phonenumber: formData.phonenumber || null, // Handle empty phone number
+            phonenumber: formData.phonenumber || null,
             role: formData.role,
-            specialization: formData.specialization || null, // Handle empty specialization
-            department: formData.department || null, // Handle empty department
-            gender: formData.gender || null, // Handle empty gender
-            bio: formData.bio || null, // Handle empty bio
-            experienceyears: experienceYears, // Use the converted value
-            departmentCategory: formData.departmentCategory || null, // Handle HOD department if applicable
+            specialization: formData.specialization || null,
+            department: formData.department || null,
+            gender: formData.gender || null,
+            bio: formData.bio || null,
+            experienceyears: experienceYears,
+            departmentCategory: formData.departmentCategory || null,
           });
 
         if (insertError) {
           setError(insertError.message);
         } else {
-          setSuccess(
-            "Registration successful! Please check your email to verify your account."
-          );
+          setSuccess("Registration successful! Please check your email to verify your account.");
           setTimeout(() => {
             navigate("/login");
           }, 2000);
@@ -263,172 +265,267 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid lg:grid-cols-2 gap-12 items-start">
           {/* Left Column - Information */}
-          <div className="space-y-8">
+          <div className="space-y-8 mt-15">
             <div className="space-y-4">
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Join MedAccess
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Join Our Healthcare Network
               </h1>
-              <p className="text-xl text-gray-600">
-                Your gateway to streamlined healthcare management
+              <p className="text-lg md:text-xl text-gray-600">
+                Become part of a community revolutionizing patient care
               </p>
             </div>
 
             <div className="space-y-6">
-              <div className="bg-white rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <Stethoscope className="w-6 h-6 text-blue-600" />
+              {[
+                {
+                  icon: <Stethoscope className="w-6 h-6 text-blue-600" />,
+                  title: "For Doctors",
+                  description: "Access patient records and collaborate seamlessly",
+                  bgColor: "bg-blue-100",
+                },
+                {
+                  icon: <Building2 className="w-6 h-6 text-purple-600" />,
+                  title: "For Department Heads",
+                  description: "Manage operations and analyze department performance",
+                  bgColor: "bg-purple-100",
+                },
+                {
+                  icon: <Users className="w-6 h-6 text-green-600" />,
+                  title: "For Trustees",
+                  description: "Oversee strategy and resource allocation",
+                  bgColor: "bg-green-100",
+                },
+              ].map((item, index) => (
+                <div 
+                  key={index}
+                  className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+                  onClick={() => toggleAccordion(index)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 ${item.bgColor} rounded-lg`}>
+                      {item.icon}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {item.title}
+                      </h3>
+                      <p className="text-gray-600">{item.description}</p>
+                    </div>
+                    <ChevronDown 
+                      className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                        activeAccordion === index ? "transform rotate-180" : ""
+                      }`}
+                    />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      For Doctors
-                    </h3>
-                    <p className="text-gray-600">
-                      Access patient records and collaborate seamlessly
-                    </p>
-                  </div>
+                  
+                  {activeAccordion === index && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        {index === 0 && (
+                          <>
+                            <li className="flex items-start">
+                              <span className="text-blue-500 mr-2">•</span>
+                              Real-time patient data access
+                            </li>
+                            <li className="flex items-start">
+                              <span className="text-blue-500 mr-2">•</span>
+                              Secure messaging with colleagues
+                            </li>
+                            <li className="flex items-start">
+                              <span className="text-blue-500 mr-2">•</span>
+                              Digital prescription tools
+                            </li>
+                          </>
+                        )}
+                        {index === 1 && (
+                          <>
+                            <li className="flex items-start">
+                              <span className="text-purple-500 mr-2">•</span>
+                              Department analytics dashboard
+                            </li>
+                            <li className="flex items-start">
+                              <span className="text-purple-500 mr-2">•</span>
+                              Staff management tools
+                            </li>
+                            <li className="flex items-start">
+                              <span className="text-purple-500 mr-2">•</span>
+                              Resource allocation tracking
+                            </li>
+                          </>
+                        )}
+                        {index === 2 && (
+                          <>
+                            <li className="flex items-start">
+                              <span className="text-green-500 mr-2">•</span>
+                              Hospital-wide performance metrics
+                            </li>
+                            <li className="flex items-start">
+                              <span className="text-green-500 mr-2">•</span>
+                              Financial overview reports
+                            </li>
+                            <li className="flex items-start">
+                              <span className="text-green-500 mr-2">•</span>
+                              Strategic planning tools
+                            </li>
+                          </>
+                        )}
+                      </ul>
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <div className="bg-white rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-purple-100 rounded-lg">
-                    <Building2 className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      For Department Heads
-                    </h3>
-                    <p className="text-gray-600">
-                      Manage operations and analyze department performance
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <Users className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      For Trustees
-                    </h3>
-                    <p className="text-gray-600">
-                      Oversee strategy and resource allocation
-                    </p>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
           {/* Right Column - Form */}
-          <div className="bg-white p-8 rounded-2xl shadow-2xl border border-gray-100">
+          <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 mt-15">
             <div className="flex items-center gap-3 mb-8">
-              <UserPlus className="w-8 h-8 text-blue-600" />
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <UserPlus className="w-6 h-6 text-blue-600" />
+              </div>
               <h2 className="text-2xl font-bold text-gray-900">
-                Create Your Account
+                Register Your Account
               </h2>
             </div>
 
             {error && (
-              <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-100">
-                <p className="text-red-600 text-sm">{error}</p>
+              <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
+                <p className="text-red-600">{error}</p>
               </div>
             )}
 
             {success && (
-              <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-100">
-                <p className="text-green-600 text-sm">{success}</p>
+              <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                <p className="text-green-600">{success}</p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  name="fullname"
-                  placeholder="Full Name"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  onChange={handleChange}
-                  required
-                />
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email Address"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  onChange={handleChange}
-                  required
-                />
-                <input
-                  type="text"
-                  name="phonenumber"
-                  placeholder="Phone Number"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  onChange={handleChange}
-                  required
-                />
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Password"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  onChange={handleChange}
-                  required
-                />
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  placeholder="Confirm Password"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  onChange={handleChange}
-                  required
-                />
-                <select
-                  name="gender"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      name="fullname"
+                      placeholder="John Doe"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="john@example.com"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Gender
+                    </label>
+                    <select
+                      name="gender"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      name="phonenumber"
+                      placeholder="+1 234 567 890"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      placeholder="••••••••"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Confirm Password
+                    </label>
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      placeholder="••••••••"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-700">
-                  Select your role
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Select Your Role
                 </label>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     {
                       role: "Doctor",
-                      icon: <Stethoscope className="w-5 h-5 text-blue-600" />,
+                      icon: <Stethoscope className="w-5 h-5" />,
+                      color: "blue",
                     },
                     {
                       role: "HOD",
-                      icon: <Building2 className="w-5 h-5 text-purple-600" />,
+                      icon: <Building2 className="w-5 h-5" />,
+                      color: "purple",
                     },
                     {
                       role: "Trustee",
-                      icon: <Users className="w-5 h-5 text-green-600" />,
+                      icon: <Users className="w-5 h-5" />,
+                      color: "green",
                     },
-                  ].map(({ role, icon }) => (
+                  ].map(({ role, icon, color }) => (
                     <label
                       key={role}
-                      className={`flex items-center justify-between gap-2 cursor-pointer rounded-lg px-4 py-3 text-center font-medium text-sm border-2 ${
+                      className={`flex flex-col items-center justify-center gap-2 cursor-pointer rounded-lg px-4 py-3 text-center font-medium text-sm border-2 ${
                         formData.role === role
-                          ? "bg-blue-600 text-white border-blue-600 shadow-lg"
-                          : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
+                          ? `bg-${color}-600 text-white border-${color}-600 shadow-lg`
+                          : `bg-white text-gray-600 border-gray-200 hover:bg-gray-50`
                       } transition-all duration-200`}
                     >
                       <input
@@ -438,156 +535,182 @@ const Register = () => {
                         onChange={handleChange}
                         className="hidden"
                       />
+                      <div className={`p-2 rounded-full bg-${color}-100`}>
+                        {icon}
+                      </div>
                       <span>{role}</span>
-                      {icon}
                     </label>
                   ))}
                 </div>
               </div>
 
+              {/* Dynamic Fields Based on Role */}
               {formData.role === "Doctor" && (
-                <>
-                  {/* Department Dropdown */}
-                  <select
-                    name="department"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Select Department</option>
-                    {Object.keys(doctorsfordepartment).map((department) => (
-                      <option key={department} value={department}>
-                        {department}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Specialization Dropdown */}
-                  {formData.department && (
-                    <select
-                      name="specialization"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">Select Specialization</option>
-                      {doctorsfordepartment[formData.department]?.map(
-                        (specialization) => (
-                          <option key={specialization} value={specialization}>
-                            {specialization}
-                          </option>
-                        )
-                      )}
-                    </select>
-                  )}
-
-                  {/* Bio Textarea */}
-                  <textarea
-                    name="bio"
-                    placeholder="Add your bio or achievements"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                    onChange={handleChange}
-                    required
-                  />
-
-                  {/* Experience Input */}
-                  <input
-                    type="number"
-                    name="experienceyears"
-                    placeholder="Years of Experience"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                    onChange={handleChange}
-                    required
-                  />
-                </>
-              )}
-
-              {formData.role === "HOD" && (
-                <>
-                  {/* Department Category Dropdown */}
-                  <select
-                    name="departmentCategory"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Select HOD Department Category</option>
-                    {Object.keys(departmentOptions).map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Department Dropdown */}
-                  {formData.departmentCategory && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Department
+                    </label>
                     <select
                       name="department"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                       onChange={handleChange}
                       required
                     >
                       <option value="">Select Department</option>
-                      {departmentOptions[formData.departmentCategory]?.map(
-                        (department) => (
-                          <option key={department} value={department}>
-                            {department}
-                          </option>
-                        )
-                      )}
+                      {Object.keys(doctorsfordepartment).map((department) => (
+                        <option key={department} value={department}>
+                          {department}
+                        </option>
+                      ))}
                     </select>
+                  </div>
+
+                  {formData.department && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Specialization
+                      </label>
+                      <select
+                        name="specialization"
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                        onChange={handleChange}
+                        required
+                      >
+                        <option value="">Select Specialization</option>
+                        {doctorsfordepartment[formData.department]?.map(
+                          (specialization) => (
+                            <option key={specialization} value={specialization}>
+                              {specialization}
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </div>
                   )}
-                  <input
-                    type="number"
-                    name="experienceyears"
-                    placeholder="Years of Experience"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                    onChange={handleChange}
-                    required
-                  />
-                </>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Bio
+                    </label>
+                    <textarea
+                      name="bio"
+                      placeholder="Tell us about your professional background..."
+                      rows="3"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Years of Experience
+                    </label>
+                    <input
+                      type="number"
+                      name="experienceyears"
+                      placeholder="5"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {formData.role === "HOD" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Department Category
+                    </label>
+                    <select
+                      name="departmentCategory"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Select Category</option>
+                      {Object.keys(departmentOptions).map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {formData.departmentCategory && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Department
+                      </label>
+                      <select
+                        name="department"
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
+                        onChange={handleChange}
+                        required
+                      >
+                        <option value="">Select Department</option>
+                        {departmentOptions[formData.departmentCategory]?.map(
+                          (department) => (
+                            <option key={department} value={department}>
+                              {department}
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Years of Experience
+                    </label>
+                    <input
+                      type="number"
+                      name="experienceyears"
+                      placeholder="5"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
               )}
 
               <button
                 type="submit"
-                className={`w-full py-3 rounded-lg font-semibold text-white ${
+                className={`w-full py-3.5 rounded-lg font-semibold text-white ${
                   loading
                     ? "bg-blue-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-                } transition-all duration-200 shadow-lg hover:shadow-xl`}
+                    : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                } transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2`}
                 disabled={loading}
               >
                 {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Creating account...
-                  </span>
+                    Processing...
+                  </>
                 ) : (
-                  "Create Account"
+                  <>
+                    <UserPlus className="w-5 h-5" />
+                    Create Account
+                  </>
                 )}
               </button>
 
-              <p className="text-center text-gray-600">
+              <p className="text-center text-gray-600 text-sm">
                 Already have an account?{" "}
                 <a
                   href="/login"
                   className="text-blue-600 hover:text-blue-700 font-medium"
                 >
-                  Sign in
+                  Sign in here
                 </a>
               </p>
             </form>
