@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Sidebar from "./Sidebar";
 
 const Doctors = () => {
   const [doctors, setDoctors] = useState([]);
@@ -22,24 +23,37 @@ const Doctors = () => {
     fetchDoctors();
   }, []);
 
-  if (loading) return <div className="text-center text-gray-600">Loading doctors...</div>;
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-screen text-gray-600 text-lg font-semibold">
+        Loading doctors...
+      </div>
+    );
 
   return (
-    <div className="p-6 bg-gray-100">
-      <h1 className="text-3xl font-bold mb-4">Department Doctors</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {doctors.length > 0 ? (
-          doctors.map((doctor) => (
-            <div key={doctor.id} className="bg-white p-4 shadow-md rounded">
-              <h2 className="text-xl font-semibold">{doctor.fullname}</h2>
-              <p className="text-gray-500">{doctor.specialization}</p>
-              <p className="text-gray-700">{doctor.experienceyears} Years Experience</p>
-              <p className="text-gray-500">{doctor.phonenumber}</p>
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-500">No doctors found.</p>
-        )}
+    <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
+      <Sidebar />
+      <div className="p-6 w-full md:w-4/5">
+        <h1 className="text-4xl font-extrabold text-gray-800 mb-6">Department Doctors</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {doctors.length > 0 ? (
+            doctors.map((doctor) => (
+              <div
+                key={doctor.id}
+                className="bg-white p-6 shadow-lg rounded-2xl border border-gray-200 hover:shadow-xl transition-shadow duration-300"
+              >
+                <h2 className="text-2xl font-bold text-gray-900">{doctor.fullname}</h2>
+                <p className="text-gray-600 mt-1">{doctor.specialization}</p>
+                <p className="text-gray-700 mt-2 font-medium">
+                  {doctor.experienceyears} Years Experience
+                </p>
+                <p className="text-gray-500 mt-2">📞 {doctor.phonenumber}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 text-lg col-span-full text-center">No doctors found.</p>
+          )}
+        </div>
       </div>
     </div>
   );
