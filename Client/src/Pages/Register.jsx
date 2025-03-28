@@ -250,7 +250,9 @@ const Register = () => {
           setSuccess(
             "Registration successful! Please check your email to verify your account."
           );
-          navigate("/login")
+          setTimeout(() => {
+            navigate("/login")
+          }, 2000);
         }
       }
     } catch (err) {
