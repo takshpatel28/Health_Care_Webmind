@@ -127,7 +127,7 @@ const Profile = () => {
             {/* Profile Image */}
             <div className="relative">
               <img
-                src={profileImage || 'https://via.placeholder.com/150'}
+                src={profileImage || 'https://www.transparentpng.com/download/user/gray-user-profile-icon-png-fP8Q1P.png'}
                 alt="Profile"
                 className="w-32 h-32 rounded-full object-cover border-4 border-gray-700 shadow-md"
               />

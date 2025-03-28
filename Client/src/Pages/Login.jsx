@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../helper/supabaseClient";
 import { Eye, EyeOff, Lock, Mail, Shield, UserCircle } from "lucide-react";
+import { supabase } from "../helper/supabaseClient";
 
 const Login = () => {
   const [email, setEmail] = useState("");
