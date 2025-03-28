@@ -4,7 +4,7 @@ module.exports.HOD = async (req, res) => {
     const { specialization } = req.query; 
 
     try {
-        let query = supabase.from('doctor').select('*');
+        let query = supabase.from('doctors').select('*');
 
         if (specialization) {
             query = query.eq('specialization', specialization);
