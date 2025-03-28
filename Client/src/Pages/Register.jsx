@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UserPlus, Building2, Stethoscope, Users } from "lucide-react";
-import { supabase } from "../helper/supabaseClient";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../helper/supabaseClient";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +16,7 @@ const Register = () => {
     gender: "",
     bio: "",
     experienceyears: "",
+    departmentCategory: "",
   });
 
   const navigate = useNavigate();
@@ -41,6 +42,11 @@ const Register = () => {
     }
 
     try {
+      // Convert experienceyears to a number or set to null if empty
+      const experienceYears = formData.experienceyears
+        ? parseInt(formData.experienceyears, 10)
+        : null;
+
       // Supabase sign-up
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
@@ -59,13 +65,14 @@ const Register = () => {
           .insert({
             id: data.user.id, // User ID from Supabase
             fullname: formData.fullname,
-            phonenumber: formData.phonenumber, // Storing phone number
+            phonenumber: formData.phonenumber || null, // Handle empty phone number
             role: formData.role,
-            specialization: formData.specialization,
-            department: formData.department,
-            gender: formData.gender,
-            bio: formData.bio,
-            experienceyears: formData.experienceyears,
+            specialization: formData.specialization || null, // Handle empty specialization
+            department: formData.department || null, // Handle empty department
+            gender: formData.gender || null, // Handle empty gender
+            bio: formData.bio || null, // Handle empty bio
+            experienceyears: experienceYears, // Use the converted value
+            departmentCategory: formData.departmentCategory || null, // Handle HOD department if applicable
           });
 
         if (insertError) {
@@ -300,7 +307,7 @@ const Register = () => {
 
               {formData.role === "HOD" && (
                 <select
-                  name="hodDepartment"
+                  name="departmentCategory"
                   className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                   onChange={handleChange}
                   required
