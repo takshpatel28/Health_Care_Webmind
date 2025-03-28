@@ -24,6 +24,79 @@ const Register = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const departmentOptions = {
+    "Medical Departments (Clinical)": [
+      "Cardiology (Heart & Vascular Care)",
+      "Neurology (Brain & Nervous System)",
+      "Neurosurgery (Surgical Neurology)",
+      "Orthopedics (Bone & Joint Care)",
+      "General Surgery (All Types of Surgery)",
+      "Internal Medicine (General Physician Care)",
+      "Pulmonology (Lung & Respiratory Care)",
+      "Gastroenterology (Digestive System Care)",
+      "Endocrinology (Diabetes & Hormonal Disorders)",
+      "Nephrology (Kidney Care)",
+      "Hematology (Blood Disorders)",
+      "Oncology (Cancer Care)",
+      "Radiology (Medical Imaging & Diagnostics)",
+      "Dermatology (Skin, Hair & Nails)",
+      "Ophthalmology (Eye Care)",
+      "Otolaryngology (ENT) (Ear, Nose & Throat)",
+      "Rheumatology (Joint & Autoimmune Diseases)",
+      "Pediatrics (Children’s Health)",
+      "Geriatrics (Elderly Care)",
+      "Psychiatry & Mental Health (Mental Disorders & Counseling)",
+      "Urology (Urinary & Male Reproductive Health)",
+      "Obstetrics & Gynecology (OB-GYN) (Women’s Health & Maternity Care)",
+      "Anesthesiology (Pain Management & Surgery Preparation)",
+      "Emergency Medicine (Emergency & Trauma Care)",
+    ],
+    "Surgical Departments": [
+      "General Surgery (Broad Surgical Treatments)",
+      "Cardiac Surgery (Heart Surgery)",
+      "Neurosurgery (Brain & Spine Surgery)",
+      "Orthopedic Surgery (Bone & Joint Surgery)",
+      "Plastic & Reconstructive Surgery",
+      "ENT Surgery",
+      "Pediatric Surgery",
+      "Urology Surgery",
+      "Ophthalmic Surgery (Eye Surgery)",
+      "Gynecologic Surgery",
+    ],
+    "Diagnostic & Laboratory Departments": [
+      "Radiology (MRI, CT Scan, X-rays)",
+      "Pathology (Lab Tests & Disease Diagnosis)",
+      "Microbiology (Infectious Disease Testing)",
+      "Biochemistry (Blood & Chemical Analysis)",
+      "Genetics (Genetic Testing & Counseling)",
+    ],
+    "Support & Allied Health Departments": [
+      "Physiotherapy & Rehabilitation",
+      "Occupational Therapy",
+      "Speech Therapy",
+      "Dietetics & Nutrition",
+      "Pharmacy",
+      "Blood Bank",
+    ],
+    "Administrative & Management Departments": [
+      "Hospital Administration",
+      "Human Resources (HR)",
+      "Finance & Billing",
+      "Medical Records & Health Information Management",
+      "Quality & Compliance",
+      "Infection Control",
+      "Supply Chain & Procurement",
+      "IT & Health Informatics",
+    ],
+    "Emergency & Specialized Units": [
+      "Emergency Department (ER)",
+      "Intensive Care Unit (ICU)",
+      "Neonatal Intensive Care Unit (NICU)",
+      "Burn Unit",
+      "Dialysis Unit",
+    ],
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -305,20 +378,41 @@ const Register = () => {
                 </>
               )}
 
-              {formData.role === "HOD" && (
-                <select
-                  name="departmentCategory"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select HOD Department</option>
-                  <option value="Administration">Administration</option>
-                  <option value="Research">Research</option>
-                  <option value="Operations">Operations</option>
-                  <option value="Finance">Finance</option>
-                </select>
-              )}
+{formData.role === "HOD" && (
+  <>
+    {/* Department Category Dropdown */}
+    <select
+      name="departmentCategory"
+      className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+      onChange={handleChange}
+      required
+    >
+      <option value="">Select HOD Department Category</option>
+      {Object.keys(departmentOptions).map((category) => (
+        <option key={category} value={category}>
+          {category}
+        </option>
+      ))}
+    </select>
+
+    {/* Department Dropdown */}
+    {formData.departmentCategory && (
+      <select
+        name="department"
+        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+        onChange={handleChange}
+        required
+      >
+        <option value="">Select Department</option>
+        {departmentOptions[formData.departmentCategory]?.map((department) => (
+          <option key={department} value={department}>
+            {department}
+          </option>
+        ))}
+      </select>
+    )}
+  </>
+)}
 
               <button
                 type="submit"
