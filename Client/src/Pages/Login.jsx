@@ -21,15 +21,37 @@ const Login = () => {
 
     try {
       setLoading(true);
+
+      // 🔹 Step 1: Authenticate User
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
-      if (!data) throw new Error("Login failed. Please try again.");
+      if (!data || !data.user) throw new Error("Login failed. Please try again.");
 
-      navigate("/dash");
+      const userID = data.user.id; // ✅ Get logged-in user ID
+      console.log("Logged-in User ID:", userID);
+
+      // 🔹 Step 2: Fetch All Users (Doctors Table)
+      const { data: doctors, error: fetchError } = await supabase.from("doctors").select();
+
+      if (fetchError) throw fetchError;
+      if (!doctors) throw new Error("Failed to fetch users.");
+
+      console.log("Fetched Doctors Data:", doctors);
+
+      // 🔹 Step 3: Check If the User is an HOD
+      const loggedInHOD = doctors.find(user => user.id === userID && user.role === "HOD");
+
+      if (loggedInHOD) {
+        console.log("HOD Found:", loggedInHOD);
+        navigate("/dashboard"); // ✅ Redirect HOD to dashboard
+      } else {
+        setMessage("Access Denied: Only HODs can access the dashboard.");
+      }
+
     } catch (error) {
       setMessage(error?.message || "An error occurred.");
       setPassword("");
@@ -37,6 +59,7 @@ const Login = () => {
       setLoading(false);
     }
   };
+
 
   const handleResetPassword = async () => {
     if (!email) {
@@ -69,7 +92,7 @@ const Login = () => {
           Or <a href="/signup" className="text-blue-600 hover:underline">create a new account</a>
         </p>
         {message && <p className="text-red-500 text-center mt-3">{message}</p>}
-        
+
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="block text-gray-700">Email address</label>
@@ -91,13 +114,12 @@ const Login = () => {
               placeholder="Enter your password"
             />
           </div>
-          
+
           {!resetMode ? (
             <>
               <button
-                className={`w-full py-2 text-white font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 transition-all ${
-                  loading ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className={`w-full py-2 text-white font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 transition-all ${loading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 type="submit"
                 disabled={loading}
               >
@@ -110,9 +132,8 @@ const Login = () => {
           ) : (
             <>
               <button
-                className={`w-full py-2 text-white font-semibold rounded-lg bg-green-500 hover:bg-green-700 transition-all ${
-                  loading ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className={`w-full py-2 text-white font-semibold rounded-lg bg-green-500 hover:bg-green-700 transition-all ${loading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 type="button"
                 onClick={handleResetPassword}
                 disabled={loading}

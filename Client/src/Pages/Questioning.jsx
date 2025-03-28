@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../helper/supabaseClient";
 
 const Questioning = () => {
-  const { role } = useContext(MyContext);
+  let role = localStorage.getItem("role")
+
   const navigate = useNavigate();
 
   const doctorQuestions = [
@@ -114,8 +115,6 @@ const Questioning = () => {
       departmentCategory: selectedCategory, // ✅ Ensure category is included
     };
 
-    console.log("Final Form Data:", updatedFormData); // 🔍 Debugging
-
     const { data, error } = await supabase.auth.getSession();
 
     if (error || !data.session) {
@@ -133,6 +132,7 @@ const Questioning = () => {
       if (error) {
         console.error("Error updating data:", error);
       } else {
+        localStorage.removeItem('role');
         navigate("/login");
       }
     } catch (err) {

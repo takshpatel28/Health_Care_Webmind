@@ -24,12 +24,6 @@ const Navbar = () => {
     return () => listener?.subscription?.unsubscribe();
   }, []);
 
-  // Logout function
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-  };
-
   return (
     <nav className='bg-gray-800 p-4 text-white'>
       <div className='container mx-auto flex justify-between items-center'>
@@ -62,9 +56,9 @@ const Navbar = () => {
         ) : (
           <div className='hidden md:flex gap-4 items-center'>
             <Link to="/profile" className='hover:text-gray-400'>Profile</Link>
-            <button onClick={handleLogout} className='bg-red-500 px-4 py-2 rounded hover:bg-red-600 transition-all'>
+            {/* <button onClick={handleLogout} className='bg-red-500 px-4 py-2 rounded hover:bg-red-600 transition-all'>
               Logout
-            </button>
+            </button> */}
           </div>
         )}
       </div>

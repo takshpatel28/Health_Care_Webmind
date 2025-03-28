@@ -10,6 +10,7 @@ import Home from './Pages/Home'
 import Dashboard from './Pages/Dashboard'
 import Register from './Pages/Register'
 import Questioning from './Pages/Questioning'
+import Doctors from './Components/Doctors'
 
 const App = () => {
   return (
@@ -18,7 +19,7 @@ const App = () => {
     <SignupModel />
       <Routes>
         <Route path='/' element={<HomePage />}/>
-        <Route path='/dash' element={
+        <Route path='/dashboard' element={
           <Wrapper>
           <Dashboard />
           </Wrapper>}/>
@@ -26,6 +27,7 @@ const App = () => {
         <Route path='/update-password' element={<ResetPassword />}/>
         <Route path='/login' element={<Login />}/>
         <Route path='/questioning' element={<Questioning />}/>
+        <Route path='/doctors' element={<Doctors />}/>
       </Routes>
     </BrowserRouter>
   )
