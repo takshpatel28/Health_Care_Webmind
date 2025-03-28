@@ -1,64 +1,80 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../helper/supabaseClient';
+import React, { useState } from "react";
+import { supabase } from "../helper/supabaseClient";
 
 const ResetPassword = () => {
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const navigate = useNavigate();
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handlePasswordReset = async () => {
-    if (!newPassword || !confirmPassword) {
-      setMessage('Please fill out both fields.');
-      return;
-    }
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setMessage("");
 
-    if (newPassword !== confirmPassword) {
-      setMessage('Passwords do not match.');
+    if (password !== confirmPassword) {
+      setMessage("Passwords do not match.");
       return;
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      setLoading(true);
+      const { error } = await supabase.auth.updateUser({
+        password,
+      });
 
       if (error) throw error;
-
-      setMessage('Password updated successfully! Redirecting...');
-      
-      setTimeout(() => navigate('/login'), 2000); // Redirect after 2 seconds
+      setMessage("Password updated successfully! You can now log in.");
     } catch (error) {
-      setMessage(error?.message || 'An error occurred.');
+      setMessage(error.message || "An error occurred.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">Reset Password</h1>
-        {message && <span className="text-red-500 block text-center mb-4">{message}</span>}
-        <div className="space-y-4">
-          <input
-            className="w-full border border-gray-300 p-3 rounded-lg"
-            type="password"
-            placeholder="New Password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-          <input
-            className="w-full border border-gray-300 p-3 rounded-lg"
-            type="password"
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-lg">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Reset Password</h2>
+        {message && <p className="text-center text-red-500 mb-4">{message}</p>}
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              New Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter new password"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              Confirm Password
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Confirm new password"
+              required
+            />
+          </div>
           <button
-            className="w-full bg-blue-500 text-white py-3 rounded-lg"
-            onClick={handlePasswordReset}
+            type="submit"
+            className={`w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none ${
+              loading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            disabled={loading}
           >
-            Reset Password
+            {loading ? "Updating..." : "Update Password"}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );
