@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { UserPlus, Building2, Stethoscope, Users } from "lucide-react";
 import { supabase } from "../helper/supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -17,6 +18,7 @@ const Register = () => {
     experienceyears: "",
   });
 
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -43,6 +45,9 @@ const Register = () => {
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          data: { displayName: formData.fullname }, // Storing display name in user metadata
+        },
       });
 
       if (error) {
@@ -54,19 +59,21 @@ const Register = () => {
           .insert({
             id: data.user.id, // User ID from Supabase
             fullname: formData.fullname,
-            phonenumber: formData.phonenumber,
+            phonenumber: formData.phonenumber, // Storing phone number
             role: formData.role,
             specialization: formData.specialization,
             department: formData.department,
             gender: formData.gender,
             bio: formData.bio,
-            experienceyears: formData.experience,
+            experienceyears: formData.experienceyears,
           });
 
         if (insertError) {
           setError(insertError.message);
         } else {
-          setSuccess("Registration successful! Please check your email to verify your account.");
+          setSuccess(
+            "Registration successful! Please check your email to verify your account."
+          );
         }
       }
     } catch (err) {
@@ -98,8 +105,12 @@ const Register = () => {
                     <Stethoscope className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">For Doctors</h3>
-                    <p className="text-gray-600">Access patient records and collaborate seamlessly</p>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      For Doctors
+                    </h3>
+                    <p className="text-gray-600">
+                      Access patient records and collaborate seamlessly
+                    </p>
                   </div>
                 </div>
               </div>
@@ -110,8 +121,12 @@ const Register = () => {
                     <Building2 className="w-6 h-6 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">For Department Heads</h3>
-                    <p className="text-gray-600">Manage operations and analyze department performance</p>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      For Department Heads
+                    </h3>
+                    <p className="text-gray-600">
+                      Manage operations and analyze department performance
+                    </p>
                   </div>
                 </div>
               </div>
@@ -122,8 +137,12 @@ const Register = () => {
                     <Users className="w-6 h-6 text-green-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">For Trustees</h3>
-                    <p className="text-gray-600">Oversee strategy and resource allocation</p>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      For Trustees
+                    </h3>
+                    <p className="text-gray-600">
+                      Oversee strategy and resource allocation
+                    </p>
                   </div>
                 </div>
               </div>
@@ -134,7 +153,9 @@ const Register = () => {
           <div className="bg-white p-8 rounded-2xl shadow-2xl border border-gray-100">
             <div className="flex items-center gap-3 mb-8">
               <UserPlus className="w-8 h-8 text-blue-600" />
-              <h2 className="text-2xl font-bold text-gray-900">Create Your Account</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Create Your Account
+              </h2>
             </div>
 
             {error && (
@@ -163,6 +184,14 @@ const Register = () => {
                   type="email"
                   name="email"
                   placeholder="Email Address"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                  onChange={handleChange}
+                  required
+                />
+                <input
+                  type="text"
+                  name="phonenumber"
+                  placeholder="Phone Number"
                   className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                   onChange={handleChange}
                   required
@@ -197,23 +226,31 @@ const Register = () => {
               </div>
 
               <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-700">Select your role</label>
+                <label className="text-sm font-medium text-gray-700">
+                  Select your role
+                </label>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { role: "Doctor", icon: <Stethoscope className="w-5 h-5 text-blue-600" /> },
-                    { role: "HOD", icon: <Building2 className="w-5 h-5 text-purple-600" /> },
-                    { role: "Trustee", icon: <Users className="w-5 h-5 text-green-600" /> },
+                    {
+                      role: "Doctor",
+                      icon: <Stethoscope className="w-5 h-5 text-blue-600" />,
+                    },
+                    {
+                      role: "HOD",
+                      icon: <Building2 className="w-5 h-5 text-purple-600" />,
+                    },
+                    {
+                      role: "Trustee",
+                      icon: <Users className="w-5 h-5 text-green-600" />,
+                    },
                   ].map(({ role, icon }) => (
                     <label
                       key={role}
-                      className={`
-                        flex items-center justify-between gap-2 cursor-pointer rounded-lg px-4 py-3 text-center font-medium text-sm border-2
-                        ${formData.role === role
+                      className={`flex items-center justify-between gap-2 cursor-pointer rounded-lg px-4 py-3 text-center font-medium text-sm border-2 ${
+                        formData.role === role
                           ? "bg-blue-600 text-white border-blue-600 shadow-lg"
                           : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
-                        }
-                        transition-all duration-200                    
-                      `}
+                      } transition-all duration-200`}
                     >
                       <input
                         type="radio"
@@ -263,14 +300,11 @@ const Register = () => {
 
               <button
                 type="submit"
-                className={`
-                  w-full py-3 rounded-lg font-semibold text-white
-                  ${loading
+                className={`w-full py-3 rounded-lg font-semibold text-white ${
+                  loading
                     ? "bg-blue-400 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-                  }
-                  transition-all duration-200 shadow-lg hover:shadow-xl
-                `}
+                } transition-all duration-200 shadow-lg hover:shadow-xl`}
                 disabled={loading}
               >
                 {loading ? (
@@ -299,7 +333,10 @@ const Register = () => {
 
               <p className="text-center text-gray-600">
                 Already have an account?{" "}
-                <a href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                <a
+                  href="/login"
+                  className="text-blue-600 hover:text-blue-700 font-medium"
+                >
                   Sign in
                 </a>
               </p>

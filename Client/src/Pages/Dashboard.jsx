@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const [hodInfo, setHodInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = 
+  useState(true);
   const navigate = useNavigate();
 
   // Fetch HOD details
@@ -25,7 +26,7 @@ const Dashboard = () => {
       // Fetch only HODs from the doctors table
       const { data: hodData, error: hodError } = await supabase
         .from("doctors")
-        .select("id, fullname, specialization, experienceyears, role")
+        .select()
         .eq("role", "HOD");
 
       if (hodError) {
@@ -82,13 +83,13 @@ const Dashboard = () => {
       <div className="flex-1 p-6 bg-gray-100">
         <header className="mb-6">
           <h1 className="text-3xl font-bold">Welcome, {hodInfo?.fullname}</h1>
-          <p className="text-gray-500">Head of {hodInfo?.specialization} Department</p>
+          <p className="text-gray-500">Head of {hodInfo?.department} Department</p>
         </header>
 
         {/* Dashboard Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="bg-white p-4 shadow-md rounded">
-            <h2 className="text-lg">{hodInfo?.specialization}</h2>
+            <h2 className="text-lg">{hodInfo?.department}</h2>
             <p className="text-gray-500">Department</p>
           </div>
           <div className="bg-white p-4 shadow-md rounded">

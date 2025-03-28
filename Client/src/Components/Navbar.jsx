@@ -1,20 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiMenu, FiX } from 'react-icons/fi';
+import { FiMenu, FiX, FiSettings } from 'react-icons/fi';
 import { supabase } from '../helper/supabaseClient';
+import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState("");  // ✅ State to store user role
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // Check authentication state when component mounts
+  const navigate = useNavigate();
+
+  // Fetch user data and role
   useEffect(() => {
-    const checkAuth = async () => {
+    const fetchUserData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
+      if (session?.user) {
+        setUser(session.user);
+
+        // 🔹 Fetch role from "doctors" table
+        const { data, error } = await supabase
+          .from("doctors")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+        if (data) {
+          setRole(data.role); // ✅ Store role
+        }
+        if (error) {
+          console.error("Error fetching role:", error.message);
+        }
+      }
     };
 
-    checkAuth();
+    fetchUserData();
 
     // Listen for auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -23,6 +44,14 @@ const Navbar = () => {
 
     return () => listener?.subscription?.unsubscribe();
   }, []);
+
+  // Logout function
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
+    setUser(null);
+    setRole(""); // Clear role
+  };
 
   return (
     <nav className='bg-gray-800 p-4 text-white'>
@@ -47,18 +76,53 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Auth Buttons */}
+        {/* Auth Buttons or Profile Dropdown */}
         {!user ? (
           <div className='hidden md:flex gap-4'>
             <Link to="/signup" className='bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-all'>Sign Up</Link>
             <Link to="/login" className='hover:text-gray-400'>Login</Link>
           </div>
         ) : (
-          <div className='hidden md:flex gap-4 items-center'>
-            <Link to="/profile" className='hover:text-gray-400'>Profile</Link>
-            {/* <button onClick={handleLogout} className='bg-red-500 px-4 py-2 rounded hover:bg-red-600 transition-all'>
-              Logout
-            </button> */}
+          <div className='hidden md:block relative'>
+            <button 
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
+              className='flex items-center space-x-3 focus:outline-none cursor-pointer'
+            >
+              <img
+                src={'https://media.istockphoto.com/id/1337144146/vector/default-avatar-profile-icon-vector.jpg?s=612x612&w=0&k=20&c=BIbFwuv7FxTWvh5S3vB6bkT0Qv8Vn8N5Ffseq84ClGI='}
+                alt="Profile"
+                className='w-8 h-8 rounded-full'
+              />
+              <span className='font-medium'>{user.user_metadata?.displayName || "User"}</span>
+            </button>
+
+            {/* Dropdown Menu */}
+            {isProfileOpen && (
+              <div className='absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 text-gray-800'>
+                {role === "HOD" ? (
+                  <Link to="/dashboard" className='block px-4 py-2 text-sm hover:bg-gray-100'>
+                    Dashboard
+                  </Link>
+                ) : role === "Doctor" ? (
+                  <Link to="/profile" className='block px-4 py-2 text-sm hover:bg-gray-100'>
+                    Profile
+                  </Link>
+                ) : null}
+
+                <Link to="/settings" className='block px-4 py-2 text-sm hover:bg-gray-100'>
+                  <div className='flex items-center'>
+                    <FiSettings className='mr-2' />
+                    Settings
+                  </div>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className='block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100'
+                >
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
