@@ -298,6 +298,21 @@ const Register = () => {
                 </>
               )}
 
+              {formData.role === "HOD" && (
+                <select
+                  name="hodDepartment"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select HOD Department</option>
+                  <option value="Administration">Administration</option>
+                  <option value="Research">Research</option>
+                  <option value="Operations">Operations</option>
+                  <option value="Finance">Finance</option>
+                </select>
+              )}
+
               <button
                 type="submit"
                 className={`w-full py-3 rounded-lg font-semibold text-white ${
