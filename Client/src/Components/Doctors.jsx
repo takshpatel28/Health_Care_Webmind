@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
-import axios from 'axios'
+import axios from 'axios';
 
 const Doctors = () => {
   const [doctors, setDoctors] = useState([]);
@@ -16,6 +16,10 @@ const Doctors = () => {
     experienceyears: "",
     phonenumber: ""
   });
+
+  // Get user role from your authentication system
+  // This should come from your auth context or localStorage
+  const userRole = localStorage.getItem('userRole') || "HOD"; // Default to HOD if not set
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -41,11 +45,15 @@ const Doctors = () => {
   );
 
   const handleDelete = async (doctorId) => {
+    if (userRole !== "Trustee") {
+      alert("Only Trustees can delete doctors");
+      return;
+    }
+
     if (window.confirm("Are you sure you want to delete this doctor?")) {
       try {
         const response = await axios.delete(`https://health-care-webmind.onrender.com/api/trusty/deletedoctor/${doctorId}`);
         
-        // Check for successful response (axios uses status codes directly)
         if (response.status === 200) {
           setDoctors(doctors.filter(doctor => doctor.id !== doctorId));
         } else {
@@ -59,6 +67,11 @@ const Doctors = () => {
   };
 
   const handleEditClick = (doctor) => {
+    if (userRole !== "Trustee") {
+      alert("Only Trustees can edit doctors");
+      return;
+    }
+    
     setEditingDoctor(doctor);
     setFormData({
       fullname: doctor.fullname,
@@ -84,6 +97,12 @@ const Doctors = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (userRole !== "Trustee") {
+      alert("Only Trustees can update doctor information");
+      return;
+    }
+
     try {
       const response = await fetch(`https://health-care-webmind.onrender.com/api/trusty/updatedoctor/${editingDoctor.id}`, {
         method: 'PUT',
@@ -182,24 +201,26 @@ const Doctors = () => {
                 />
               </svg>
             </div>
-            <button 
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center"
-              onClick={() => {
-                setEditingDoctor(null);
-                setFormData({
-                  fullname: "",
-                  specialization: "",
-                  experienceyears: "",
-                  phonenumber: ""
-                });
-                setIsModalOpen(true);
-              }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add Doctor
-            </button>
+            {userRole === "Trustee" && (
+              <button 
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center"
+                onClick={() => {
+                  setEditingDoctor(null);
+                  setFormData({
+                    fullname: "",
+                    specialization: "",
+                    experienceyears: "",
+                    phonenumber: ""
+                  });
+                  setIsModalOpen(true);
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Doctor
+              </button>
+            )}
           </div>
         </div>
 
@@ -234,26 +255,28 @@ const Doctors = () => {
                       <h2 className="text-xl font-bold text-gray-800 mb-1">{doctor.fullname}</h2>
                       <p className="text-blue-600 font-semibold mb-3">{doctor.specialization}</p>
                     </div>
-                    <div className="flex space-x-2">
-                      <button 
-                        onClick={() => handleEditClick(doctor)}
-                        className="p-2 text-blue-600 hover:text-blue-800 rounded-full hover:bg-blue-100 transition-colors"
-                        title="Edit"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(doctor.id)}
-                        className="p-2 text-red-600 hover:text-red-800 rounded-full hover:bg-red-100 transition-colors"
-                        title="Delete"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
+                    {userRole === "Trustee" && (
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={() => handleEditClick(doctor)}
+                          className="p-2 text-blue-600 hover:text-blue-800 rounded-full hover:bg-blue-100 transition-colors"
+                          title="Edit"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(doctor.id)}
+                          className="p-2 text-red-600 hover:text-red-800 rounded-full hover:bg-red-100 transition-colors"
+                          title="Delete"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex items-center text-gray-600 mb-2">
@@ -420,12 +443,14 @@ const Doctors = () => {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    {editingDoctor ? "Update" : "Add"} Doctor
-                  </button>
+                  {userRole === "Trustee" && (
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      {editingDoctor ? "Update" : "Add"} Doctor
+                    </button>
+                  )}
                 </div>
               </form>
             </div>
@@ -497,15 +522,17 @@ const Doctors = () => {
                   </div>
                   
                   <div className="mt-6 flex space-x-4">
-                    <button
-                      onClick={() => {
-                        setIsProfileModalOpen(false);
-                        handleEditClick(viewingDoctor);
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Edit Profile
-                    </button>
+                    {userRole === "Trustee" && (
+                      <button
+                        onClick={() => {
+                          setIsProfileModalOpen(false);
+                          handleEditClick(viewingDoctor);
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Edit Profile
+                      </button>
+                    )}
                     <button
                       onClick={() => setIsProfileModalOpen(false)}
                       className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
