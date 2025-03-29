@@ -238,7 +238,7 @@ const Profile = () => {
                   <Briefcase size={14} className="mr-1 sm:mr-2" />
                   {formData.role || 'Medical Professional'}
                 </div>
-                <p className="text-gray-700 text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed absolute top-20 sm:top-24 md:top-16 left-0 right-0 md:left-auto md:right-auto md:relative md:top-4 md:left-auto">
+                <p className="text-gray-700 text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed absolute top-20 sm:top-24 md:top-16 left-0 right-0 md:left-auto md:right-auto md:relative">
                   {formData.bio || 'No bio added yet. Share something about yourself.'}
                 </p>
               </div>
