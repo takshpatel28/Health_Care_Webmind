@@ -3,7 +3,7 @@ const supabase = require("../Supabase/supabaseServer");
 module.exports.GETDOCTORS = async (req, res) => {
     const { specialization } = req.query;
     try {
-        let query = supabase.from('doctors').select('*');
+        let query = supabase.from('doctors').select('*').eq('role','HOD');
 
         if (specialization) {
             query = query.eq('specialization', specialization);
