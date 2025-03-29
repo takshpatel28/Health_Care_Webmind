@@ -15,7 +15,7 @@ import HOD from './Components/HOD'
 const App = () => {
   return (
     <BrowserRouter>
-    <Navbar />
+    <Navbar /><br /><br />
       <Routes>
         <Route path='/' element={<HomePage />}/>
         <Route path='/dashboard' element={
