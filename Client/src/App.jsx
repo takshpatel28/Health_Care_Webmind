@@ -7,9 +7,9 @@ import ResetPassword from './Components/ResetPassword'
 import Login from './Pages/Login'
 import Dashboard from './Pages/Dashboard'
 import Register from './Pages/Register'
-import Questioning from './Pages/Questioning'
 import Doctors from './Components/Doctors'
 import Profile from './Pages/Profile'
+import Footer from './Pages/Footer'
 
 const App = () => {
   return (
@@ -24,10 +24,10 @@ const App = () => {
         <Route path='/signup' element={<Register />}/>
         <Route path='/update-password' element={<ResetPassword />}/>
         <Route path='/login' element={<Login />}/>
-        <Route path='/questioning' element={<Questioning />}/>
         <Route path='/doctors' element={<Doctors />}/>
         <Route path='/profile' element={<Profile />}/>
       </Routes>
+      <Footer />
     </BrowserRouter>
   )
 }

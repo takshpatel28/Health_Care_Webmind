@@ -69,7 +69,7 @@ const Dashboard = () => {
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Sidebar />
       
-      <main className="flex-1 p-6 md:p-8 lg:p-10">
+      <main className="flex-1 p-6 md:p-8 lg:p-10 mt-15">
         {/* Header with welcome message */}
         <header className="mb-10">
           <div className="flex items-center justify-between">
