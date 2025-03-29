@@ -10,6 +10,7 @@ import Register from './Pages/Register'
 import Doctors from './Components/Doctors'
 import Profile from './Pages/Profile'
 import Footer from './Pages/Footer'
+import HOD from './Components/HOD'
 
 const App = () => {
   return (
@@ -25,6 +26,7 @@ const App = () => {
         <Route path='/update-password' element={<ResetPassword />}/>
         <Route path='/login' element={<Login />}/>
         <Route path='/doctors' element={<Doctors />}/>
+        <Route path='/hods' element={<HOD />}/>
         <Route path='/profile' element={<Profile />}/>
       </Routes>
       <Footer />

@@ -3,7 +3,7 @@ const supabase = require("../Supabase/supabaseServer");
 module.exports.GETDOCTORS = async (req, res) => {
     const { specialization } = req.query;
     try {
-        let query = supabase.from('healthcare').select('*');
+        let query = supabase.from('doctors').select('*');
 
         if (specialization) {
             query = query.eq('specialization', specialization);
@@ -29,7 +29,7 @@ module.exports.GETDOCTORS = async (req, res) => {
 
 //     try {
 //         const { data, error } = await supabase
-//             .from('healthcare')
+//             .from('doctors')
 //             .insert([doctorData])
 //             .select();
 
@@ -53,7 +53,7 @@ module.exports.UpdateDoctors = async (req, res) => {
 
     try {
         const { data, error } = await supabase
-            .from('healthcare')
+            .from('doctors')
             .update(updateData)
             .eq('id', id)
             .select();
@@ -75,7 +75,7 @@ module.exports.DeleteDoctors = async (req, res) => {
 
     try {
         const { error } = await supabase
-            .from('healthcare')
+            .from('doctors')
             .delete()
             .eq('id', id);
 

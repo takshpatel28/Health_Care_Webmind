@@ -43,7 +43,7 @@ const Login = () => {
       if (fetchError) throw fetchError;
       if (!doctor) throw new Error("User not found in the database.");
 
-      if (doctor.role === "HOD") {
+      if (doctor.role === "HOD" || doctor.role === "Trustee") {
         navigate("/dashboard");
       } else if (doctor.role === "Doctor") {
         navigate("/profile");
@@ -71,9 +71,9 @@ const Login = () => {
       });
 
       if (error) throw error;
-      setMessage({ 
-        text: "Password reset email sent! Check your inbox.", 
-        type: "success" 
+      setMessage({
+        text: "Password reset email sent! Check your inbox.",
+        type: "success"
       });
     } catch (error) {
       setMessage({ text: error?.message || "An error occurred.", type: "error" });
@@ -84,7 +84,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Section - Information */}
@@ -155,11 +155,10 @@ const Login = () => {
             </div>
 
             {message.text && (
-              <div className={`mb-6 p-4 rounded-lg border ${
-                message.type === "error" 
-                  ? "bg-red-50 border-red-200 text-red-600" 
+              <div className={`mb-6 p-4 rounded-lg border ${message.type === "error"
+                  ? "bg-red-50 border-red-200 text-red-600"
                   : "bg-green-50 border-green-200 text-green-600"
-              }`}>
+                }`}>
                 <p>{message.text}</p>
               </div>
             )}
@@ -229,11 +228,10 @@ const Login = () => {
 
               <button
                 type="submit"
-                className={`w-full py-3.5 rounded-lg font-semibold text-white ${
-                  loading
+                className={`w-full py-3.5 rounded-lg font-semibold text-white ${loading
                     ? "bg-blue-400 cursor-not-allowed"
                     : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                } transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2`}
+                  } transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2`}
                 disabled={loading}
               >
                 {loading ? (
