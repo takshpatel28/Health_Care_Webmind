@@ -230,15 +230,15 @@ const Profile = () => {
                 )}
               </div>
 
-              <div className="mt-4 md:mt-0 md:ml-6 lg:ml-8 text-center md:text-left w-full md:w-auto">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              <div className="mt-4 md:mt-0 md:ml-6 lg:ml-8 text-center md:text-left w-full md:w-auto relative h-40 sm:h-48 md:h-32">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 absolute top-0 left-0 right-0 md:left-auto md:right-auto md:relative md:top-auto">
                   {formData.fullname || 'Doctor Name'}
                 </h1>
-                <div className="inline-flex items-center mt-2 px-3 py-1 bg-indigo-900 bg-opacity-40 rounded-full text-indigo-300 text-xs sm:text-sm font-medium">
+                <div className="inline-flex items-center px-3 py-1 bg-indigo-900 bg-opacity-40 rounded-full text-indigo-300 text-xs sm:text-sm font-medium absolute top-10 sm:top-12 md:top-8 left-0 right-0 md:left-auto md:right-auto md:relative">
                   <Briefcase size={14} className="mr-1 sm:mr-2" />
                   {formData.role || 'Medical Professional'}
                 </div>
-                <p className="mt-3 text-gray-700 text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed">
+                <p className="text-gray-700 text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed absolute top-20 sm:top-24 md:top-16 left-0 right-0 md:left-auto md:right-auto md:relative md:top-4 md:left-auto">
                   {formData.bio || 'No bio added yet. Share something about yourself.'}
                 </p>
               </div>
