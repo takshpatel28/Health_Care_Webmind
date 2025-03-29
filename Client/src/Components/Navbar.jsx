@@ -86,7 +86,7 @@ const Navbar = () => {
           <div className='hidden md:flex items-center space-x-1'>
             <NavLink to="/" icon={<FiHome />} text="Home" />
             <NavLink to="/services" icon={<FiActivity />} text="Services" />
-            <NavLink to="/doctors" icon={<FiUsers />} text="Doctors" />
+            <NavLink to="/my_doctors" icon={<FiUsers />} text="Doctors" />
             <NavLink to="/about" icon={<FiInfo />} text="About" />
           </div>
 
