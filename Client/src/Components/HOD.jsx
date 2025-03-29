@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../helper/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import { FiEdit2, FiTrash2, FiUser, FiMail, FiBriefcase, FiLayers, FiAward, FiSearch } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiUser, FiBriefcase, FiLayers, FiAward, FiSearch, FiX, FiCheck, FiAlertCircle } from 'react-icons/fi';
 
 const HOD = () => {
   const [hods, setHods] = useState([]);
@@ -12,23 +13,57 @@ const HOD = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     fullname: '',
-    email: '',
     department: '',
     departmentCategory: '',
     experienceyears: ''
   });
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState('success');
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [hodToDelete, setHodToDelete] = useState(null);
   const navigate = useNavigate();
+
+  // Alert component with animations
+  const AlertPopup = ({ message, type, onClose }) => {
+    const bgColor = type === 'success' ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700';
+    const icon = type === 'success' ? <FiCheck className="w-5 h-5 mr-2" /> : <FiAlertCircle className="w-5 h-5 mr-2" />;
+    
+    return (
+      <motion.div
+        initial={{ x: 300, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: 300, opacity: 0 }}
+        transition={{ type: 'spring', damping: 25 }}
+        className={`fixed top-4 right-4 border ${bgColor} px-4 py-3 rounded-lg shadow-lg max-w-sm z-50 flex items-center`}
+        role="alert"
+      >
+        {icon}
+        <span className="font-medium flex-grow">{message}</span>
+        <button 
+          onClick={onClose}
+          className="ml-4 text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          <FiX className="w-5 h-5" />
+        </button>
+      </motion.div>
+    );
+  };
 
   // Fetch HODs data
   useEffect(() => {
     const fetchHods = async () => {
       try {
-        const response = await fetch('https://health-care-webmind.onrender.com/api/trusty/getdoctors');
+        const response = await fetch('https://health-care-webmind.onrender.com/api/trusty/gethods');
         if (!response.ok) throw new Error('Failed to fetch HODs');
         const data = await response.json();
-        setHods(data.doctorsData);
+        setHods(data.hodsData || data.doctorsData || []);
       } catch (error) {
         console.error('Error fetching HODs:', error);
+        setAlertMessage('Failed to fetch HODs');
+        setAlertType('error');
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 3000);
       } finally {
         setLoading(false);
       }
@@ -60,30 +95,40 @@ const HOD = () => {
   }, [navigate]);
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this HOD?')) {
-      try {
-        const response = await fetch(`https://health-care-webmind.onrender.com/api/trusty/deletedoctor/${id}`, {
-          method: 'DELETE'
-        });
-        
-        if (response.ok) {
-          setHods(hods.filter(hod => hod._id !== id));
-          alert('HOD deleted successfully');
-        } else {
-          throw new Error('Failed to delete HOD');
-        }
-      } catch (error) {
-        console.error('Error deleting HOD:', error);
-        alert('Failed to delete HOD');
+    try {
+      const response = await fetch(`https://health-care-webmind.onrender.com/api/trusty/deletehod/${id}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        setHods(hods.filter(hod => hod.id !== id));
+        setAlertMessage('HOD deleted successfully');
+        setAlertType('success');
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 3000);
+      } else {
+        throw new Error('Failed to delete HOD');
       }
+    } catch (error) {
+      console.error('Error deleting HOD:', error);
+      setAlertMessage(error.message || 'Failed to delete HOD');
+      setAlertType('error');
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 3000);
+    } finally {
+      setShowConfirm(false);
     }
+  };
+
+  const confirmDelete = (id) => {
+    setHodToDelete(id);
+    setShowConfirm(true);
   };
 
   const handleEdit = (hod) => {
     setCurrentHod(hod);
     setFormData({
       fullname: hod.fullname,
-      email: hod.email,
       department: hod.department,
       departmentCategory: hod.departmentCategory,
       experienceyears: hod.experienceyears
@@ -94,25 +139,44 @@ const HOD = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`https://health-care-webmind.onrender.com/api/trusty/updatedoctor/${currentHod._id}`, {
+      const response = await fetch(`https://health-care-webmind.onrender.com/api/trusty/updatehod/${currentHod.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData)
       });
-
+  
       if (response.ok) {
-        const updatedHod = await response.json();
-        setHods(hods.map(hod => hod._id === currentHod._id ? updatedHod.doctor : hod));
+        const updatedData = await response.json();
+        
+        setHods(hods.map(hod => 
+          hod.id === currentHod.id ? 
+          {
+            ...hod,
+            fullname: formData.fullname,
+            department: formData.department,
+            departmentCategory: formData.departmentCategory,
+            experienceyears: formData.experienceyears
+          } 
+          : hod
+        ));
+        
         setEditModal(false);
-        alert('HOD updated successfully');
+        setAlertMessage('HOD updated successfully');
+        setAlertType('success');
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 3000);
       } else {
-        throw new Error('Failed to update HOD');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update HOD');
       }
     } catch (error) {
       console.error('Error updating HOD:', error);
-      alert('Failed to update HOD');
+      setAlertMessage(error.message || 'Failed to update HOD');
+      setAlertType('error');
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 3000);
     }
   };
 
@@ -124,9 +188,9 @@ const HOD = () => {
   };
 
   const filteredHods = hods.filter(hod => 
-    hod.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    hod.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    hod.department.toLowerCase().includes(searchTerm.toLowerCase())
+    hod.fullname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    hod.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    hod.department?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -134,7 +198,11 @@ const HOD = () => {
       <div className="flex h-screen bg-gray-50">
         <Sidebar />
         <div className="flex-1 flex justify-center items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"
+          ></motion.div>
         </div>
       </div>
     );
@@ -146,14 +214,24 @@ const HOD = () => {
       
       <main className="flex-1 overflow-y-auto p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mt-15 mb-7">
+          <motion.div 
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="flex justify-between items-center mb-8"
+          >
             <div>
               <h1 className="text-3xl font-bold text-gray-800">HOD Management</h1>
               <p className="text-gray-600 mt-2">Manage Heads of Departments in your organization</p>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8"
+          >
             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
               <div className="relative w-64">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -162,97 +240,93 @@ const HOD = () => {
                 <input
                   type="text"
                   placeholder="Search HODs..."
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <span className="text-sm text-gray-500">
+              <motion.span 
+                whileHover={{ scale: 1.05 }}
+                className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full"
+              >
                 {filteredHods.length} {filteredHods.length === 1 ? 'HOD' : 'HODs'} found
-              </span>
+              </motion.span>
             </div>
 
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
-                    </th> */}
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Department
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Experience
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    {['Name', 'Department', 'Category', 'Experience', 'Actions'].map((header, index) => (
+                      <motion.th
+                        key={header}
+                        initial={{ y: -10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.1 + index * 0.05 }}
+                        scope="col" 
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        {header}
+                      </motion.th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredHods.length > 0 ? (
-                    filteredHods.map((hod) => (
-                      <tr key={hod._id} className="hover:bg-gray-50 transition-colors">
+                    filteredHods.map((hod, index) => (
+                      <motion.tr
+                        key={hod.id}
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.1 + index * 0.03 }}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <motion.div 
+                              whileHover={{ rotate: 10, scale: 1.1 }}
+                              className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center"
+                            >
                               <FiUser className="text-blue-600" />
-                            </div>
+                            </motion.div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{hod.fullname}</div>
+                              <div className="text-sm text-gray-500">{hod.email}</div>
                             </div>
                           </div>
                         </td>
-                        {/* <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <FiMail className="text-gray-400 mr-2" />
-                            <div className="text-sm text-gray-500">{hod.email}</div>
-                          </div>
-                        </td> */}
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <FiBriefcase className="text-gray-400 mr-2" />
-                            <div className="text-sm text-gray-500">{hod.department}</div>
-                          </div>
+                          <div className="text-sm text-gray-900 font-medium">{hod.department}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <FiLayers className="text-gray-400 mr-2" />
-                            <div className="text-sm text-gray-500">{hod.departmentCategory}</div>
-                          </div>
+                          <div className="text-sm text-gray-500">{hod.departmentCategory}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <FiAward className="text-gray-400 mr-2" />
-                            <div className="text-sm text-gray-500">{hod.experienceyears} years</div>
-                          </div>
+                          <div className="text-sm text-gray-500">{hod.experienceyears} years</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => handleEdit(hod)}
-                            className="text-blue-600 hover:text-blue-900 mr-4 inline-flex items-center"
+                            className="text-blue-600 hover:text-blue-900 mr-4 inline-flex items-center transition-all"
                           >
                             <FiEdit2 className="mr-1" /> Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(hod._id)}
-                            className="text-red-600 hover:text-red-900 inline-flex items-center"
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => confirmDelete(hod.id)}
+                            className="text-red-600 hover:text-red-900 inline-flex items-center transition-all"
                           >
                             <FiTrash2 className="mr-1" /> Delete
-                          </button>
+                          </motion.button>
                         </td>
-                      </tr>
+                      </motion.tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                      <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
                         No HODs found matching your search
                       </td>
                     </tr>
@@ -260,134 +334,164 @@ const HOD = () => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </motion.div>
         </div>
       </main>
 
       {/* Edit Modal */}
-      {editModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold">Edit HOD Details</h2>
-                <button
-                  onClick={() => setEditModal(false)}
-                  className="text-white hover:text-blue-100"
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <form onSubmit={handleUpdate} className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiUser className="text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      name="fullname"
-                      value={formData.fullname}
-                      onChange={handleChange}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiMail className="text-gray-400" />
-                    </div>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiBriefcase className="text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      name="department"
-                      value={formData.department}
-                      onChange={handleChange}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Department Category</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiLayers className="text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      name="departmentCategory"
-                      value={formData.departmentCategory}
-                      onChange={handleChange}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Experience (Years)</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiAward className="text-gray-400" />
-                    </div>
-                    <input
-                      type="number"
-                      name="experienceyears"
-                      value={formData.experienceyears}
-                      onChange={handleChange}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
+      <AnimatePresence>
+        {editModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50"
+          >
+            <motion.div
+              initial={{ y: -50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className="bg-white rounded-xl shadow-lg max-w-md w-full overflow-hidden"
+            >
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-bold">Edit HOD Details</h2>
+                  <motion.button
+                    whileHover={{ rotate: 90 }}
+                    onClick={() => setEditModal(false)}
+                    className="text-white hover:text-blue-100 transition-all"
+                  >
+                    <FiX className="h-6 w-6" />
+                  </motion.button>
                 </div>
               </div>
+              <form onSubmit={handleUpdate} className="p-6">
+                <div className="space-y-4">
+                  {[
+                    { label: 'Full Name', name: 'fullname' },
+                    { label: 'Department', name: 'department' },
+                    { label: 'Department Category', name: 'departmentCategory' },
+                    { label: 'Experience (Years)', name: 'experienceyears', type: 'number' }
+                  ].map((field, index) => (
+                    <motion.div
+                      key={field.name}
+                      initial={{ y: 10, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.1 + index * 0.05 }}
+                    >
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+                      <input
+                        type={field.type || 'text'}
+                        name={field.name}
+                        value={formData[field.name]}
+                        onChange={handleChange}
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        required
+                      />
+                    </motion.div>
+                  ))}
+                </div>
 
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setEditModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                <div className="mt-6 flex justify-end space-x-3">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    type="button"
+                    onClick={() => setEditModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    type="submit"
+                    className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+                  >
+                    Save Changes
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className="bg-white rounded-xl shadow-lg max-w-md w-full overflow-hidden"
+            >
+              <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white">
+                <motion.div 
+                  initial={{ x: -10, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="flex justify-between items-center"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Save Changes
-                </button>
+                  <h2 className="text-xl font-bold">Confirm Deletion</h2>
+                  <motion.button
+                    whileHover={{ rotate: 90 }}
+                    onClick={() => setShowConfirm(false)}
+                    className="text-white hover:text-red-100 transition-all"
+                  >
+                    <FiX className="h-6 w-6" />
+                  </motion.button>
+                </motion.div>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+              <motion.div
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="p-6"
+              >
+                <p className="text-gray-700 mb-6">Are you sure you want to delete this HOD? This action cannot be undone.</p>
+                <div className="flex justify-end space-x-3">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowConfirm(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleDelete(hodToDelete)}
+                    className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all"
+                  >
+                    Delete
+                  </motion.button>
+                </div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Alert Popup */}
+      <AnimatePresence>
+        {showAlert && (
+          <AlertPopup 
+            message={alertMessage} 
+            type={alertType} 
+            onClose={() => setShowAlert(false)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

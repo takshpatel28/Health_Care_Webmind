@@ -42,6 +42,7 @@ module.exports.UpdateDoctors = async (req, res) => {
         return res.status(400).json({ message: "Internal server error", error: error.message });
     }
 };
+
 module.exports.DeleteDoctors = async (req, res) => {
     const { id } = req.params;
 
@@ -50,16 +51,24 @@ module.exports.DeleteDoctors = async (req, res) => {
     }
 
     try {
-        const { error } = await supabase
+        // Delete from "doctors" table
+        const { error: doctorError } = await supabase
             .from('doctors')
             .delete()
             .eq('id', id);
 
-        if (error) {
-            return res.status(500).json({ message: "Database error", error: error.message });
+        if (doctorError) {
+            return res.status(500).json({ message: "Database error while deleting doctor", error: doctorError.message });
         }
 
-        return res.status(200).json({ message: "Doctor deleted successfully!" });
+        // Delete from Authentication Users
+        const { error: authError } = await supabase.auth.admin.deleteUser(id);
+
+        if (authError) {
+            return res.status(500).json({ message: "Error deleting user from authentication", error: authError.message });
+        }
+
+        return res.status(200).json({ message: "Doctor deleted successfully from tables!" });
     } catch (err) {
         return res.status(500).json({ message: "Internal server error", error: err.message });
     }
