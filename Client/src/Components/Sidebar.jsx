@@ -116,7 +116,10 @@ const Sidebar = () => {
 
                 {/* User profile and logout */}
                 <div className="mt-auto pt-4">
-                    <div className="mb-4 flex items-center rounded-lg bg-gray-50 p-4">
+                    <div
+                        className="mb-4 flex items-center rounded-lg bg-gray-50 p-4 cursor-pointer hover:bg-gray-100"
+                        onClick={() => navigate('/profile')}
+                    >
                         <div className="h-10 w-10 rounded-full bg-blue-100"></div>
                         <div className="ml-3">
                             <p className="text-sm font-medium text-gray-800">
