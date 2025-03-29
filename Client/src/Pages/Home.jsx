@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FaArrowRight, FaArrowLeft, FaStethoscope, FaUserMd, FaClinicMedical, FaCalendarAlt, FaStar, FaHeartbeat, FaProcedures, FaPills } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
-const Dashboard = () => {
+const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -75,7 +75,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pt-16 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 overflow-x-hidden">
       {/* Hero Section */}
       <section className="relative py-20 md:py-32 px-4 md:px-8 bg-gradient-to-br from-teal-600 to-blue-700 text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
@@ -503,4 +503,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default Home;
