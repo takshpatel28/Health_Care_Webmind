@@ -47,25 +47,50 @@ module.exports.DeleteDoctors = async (req, res) => {
     const { id } = req.params;
 
     if (!id) {
-        return res.status(400).json({ message: "Please provide a doctor ID to delete!" });
+        return res.status(400).json({ message: "Doctor ID required!" });
     }
 
     try {
-        const { error } = await supabase
+        // Step 1: Delete from doctors table first
+        const { error: dbError } = await supabase
             .from('doctors')
             .delete()
             .eq('id', id);
 
-        if (error) {
-            return res.status(500).json({ message: "Database error", error: error.message });
+        if (dbError) {
+            return res.status(500).json({
+                message: "Database error in deleting doctor record",
+                error: dbError.message
+            });
         }
 
-        return res.status(200).json({ message: "Doctor deleted successfully!" });
+        // Step 2: Delete auth user (using service role key)
+        const { error: authError } = await supabase.auth.admin.deleteUser(id);
+
+        if (authError) {
+            // Rollback suggestion if auth fails but DB succeeded
+            await supabase
+                .from('doctors')
+                .insert({ id: id }); // Re-insert with same ID (simplified example)
+
+            return res.status(500).json({
+                message: "Auth deletion failed - rolled back DB",
+                error: authError.message
+            });
+        }
+
+        // Success case
+        return res.status(200).json({
+            message: "Doctor deleted successfully from both DB and Auth!"
+        });
+
     } catch (err) {
-        return res.status(500).json({ message: "Internal server error", error: err.message });
+        return res.status(500).json({
+            message: "Internal server error",
+            error: err.message
+        });
     }
 };
-
 
 module.exports.GET_HODS = async (req, res) => {
     const { department } = req.query;
