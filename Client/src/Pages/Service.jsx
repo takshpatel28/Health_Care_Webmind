@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaUserMd, FaHeartbeat, FaStethoscope, FaClipboardCheck, FaUserTie, FaUsers, FaCalendarAlt, FaPhone } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
 const Services = () => {
   const services = {
@@ -83,66 +84,117 @@ const Services = () => {
     ]
   };
 
+  // Simple fade-in animation configuration
+  const fadeIn = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: "easeOut"
+      }
+    }
+  };
+
+  // Staggered animation for children
+  const container = {
+    visible: {
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Professional Header */}
-        <div className="text-center mb-16">
+        <motion.div 
+          initial="hidden"
+          animate="visible"
+          variants={fadeIn}
+          className="text-center mb-16"
+        >
           <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl mb-4">
             Services Portal
           </h1>
           <p className="max-w-3xl mx-auto text-xl text-gray-600">
             Comprehensive services for physicians, department heads, and trustees
           </p>
-        </div>
+        </motion.div>
 
         {/* Doctor Services Section */}
-        <section className="mb-20">
-          <div className="flex items-center mb-8">
+        <motion.section 
+          className="mb-20"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={container}
+        >
+          <motion.div className="flex items-center mb-8" variants={fadeIn}>
             <div className="bg-blue-100 p-3 rounded-lg mr-4">
               <FaUserMd className="text-2xl text-blue-600" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900">Physician Services</h2>
-          </div>
-          <div className="grid gap-8 md:grid-cols-2">
+          </motion.div>
+          <motion.div className="grid gap-8 md:grid-cols-2" variants={container}>
             {services.doctor.map((service, index) => (
-              <ServiceCard key={`doctor-${index}`} service={service} />
+              <ServiceCard key={`doctor-${index}`} service={service} index={index} />
             ))}
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
         {/* HOD Services Section */}
-        <section className="mb-20">
-          <div className="flex items-center mb-8">
+        <motion.section 
+          className="mb-20"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={container}
+        >
+          <motion.div className="flex items-center mb-8" variants={fadeIn}>
             <div className="bg-blue-100 p-3 rounded-lg mr-4">
               <FaUserTie className="text-2xl text-blue-600" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900">Department Leadership Services</h2>
-          </div>
-          <div className="grid gap-8 md:grid-cols-2">
+          </motion.div>
+          <motion.div className="grid gap-8 md:grid-cols-2" variants={container}>
             {services.hod.map((service, index) => (
-              <ServiceCard key={`hod-${index}`} service={service} />
+              <ServiceCard key={`hod-${index}`} service={service} index={index} />
             ))}
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
         {/* Trustee Services Section */}
-        <section className="mb-20">
-          <div className="flex items-center mb-8">
+        <motion.section 
+          className="mb-20"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={container}
+        >
+          <motion.div className="flex items-center mb-8" variants={fadeIn}>
             <div className="bg-blue-100 p-3 rounded-lg mr-4">
               <FaUsers className="text-2xl text-blue-600" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900">Trustee Services</h2>
-          </div>
-          <div className="grid gap-8 md:grid-cols-2">
+          </motion.div>
+          <motion.div className="grid gap-8 md:grid-cols-2" variants={container}>
             {services.trustee.map((service, index) => (
-              <ServiceCard key={`trustee-${index}`} service={service} />
+              <ServiceCard key={`trustee-${index}`} service={service} index={index} />
             ))}
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
         {/* Professional Contact Section */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <motion.div 
+          className="bg-white rounded-xl shadow-lg overflow-hidden"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={fadeIn}
+        >
           <div className="md:flex">
             <div className="md:w-1/2 bg-blue-700 p-10 text-white">
               <h2 className="text-3xl font-bold mb-6">Professional Contact</h2>
@@ -192,25 +244,34 @@ const Services = () => {
                     <option>Strategic Planning</option>
                   </select>
                 </div>
-                <button
+                <motion.button
                   type="submit"
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-300"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   Submit Request
-                </button>
+                </motion.button>
               </form>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
 };
 
-// Reusable Service Card Component
-const ServiceCard = ({ service }) => {
+// Simplified Service Card Component with consistent animation
+const ServiceCard = ({ service, index }) => {
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 border border-gray-100">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.6, delay: index * 0.1, ease: "easeOut" }}
+      className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 border border-gray-100"
+      whileHover={{ y: -5 }}
+    >
       <div className="h-48 overflow-hidden relative">
         <img
           src={service.image}
@@ -239,7 +300,7 @@ const ServiceCard = ({ service }) => {
           </ul>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

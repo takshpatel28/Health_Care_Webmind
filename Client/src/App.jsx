@@ -12,6 +12,7 @@ import Footer from './Pages/Footer'
 import HOD from './Components/HOD'
 import Home from './Pages/Home'
 import Services from './Pages/Service'
+import ProfileCompletion from './Pages/ProfileCompletion'
 
 const App = () => {
   return (
@@ -32,6 +33,7 @@ const App = () => {
           </Wrapper>}/>
         <Route path='/hods' element={<HOD />}/>
         <Route path='/services' element={<Services />}/>
+        <Route path='/profile-completion' element={<ProfileCompletion />}/>
         <Route path='/profile' element={<Profile />}/>
       </Routes>
       <Footer />

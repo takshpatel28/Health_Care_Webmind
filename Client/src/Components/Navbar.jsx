@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMenu, FiX, FiUser, FiLogOut, FiHome, FiActivity, FiUsers, FiInfo } from 'react-icons/fi';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
@@ -10,6 +10,7 @@ const Navbar = () => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [activeButton, setActiveButton] = useState(null);
   const navigate = useNavigate();
 
   // Scroll animations
@@ -70,6 +71,15 @@ const Navbar = () => {
     navigate('/login');
   };
 
+  const handleButtonClick = (buttonName) => {
+    setActiveButton(buttonName);
+    if (buttonName === 'login') {
+      navigate('/login');
+    } else if (buttonName === 'signup') {
+      navigate('/signup');
+    }
+  };
+
   const isAdmin = role === "HOD" || role === "Trustee";
 
   return (
@@ -108,7 +118,6 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-1">
             <NavLink to="/" icon={<FiHome />} text="Home" />
             <NavLink to="/services" icon={<FiActivity />} text="Services" />
-            {/* Show Doctors tab only for HOD/Trustee */}
             {isAdmin && (
               <NavLink to="/doctors" icon={<FiUsers />} text="Doctors" />
             )}
@@ -118,19 +127,62 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             {!user ? (
               <>
-                <Link to="/login" className="hidden md:block px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-300">
-                  Login
-                </Link>
                 <motion.div 
-                  whileHover={{ scale: 1.05 }} 
-                  whileTap={{ scale: 0.95 }}
-                  initial={{ scale: 0.9 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 400 }}
+                  className="hidden md:block relative overflow-hidden rounded-full"
+                  initial={false}
+                  animate={{
+                    backgroundColor: activeButton === 'login' ? '#3b82f6' : 'transparent'
+                  }}
+                  transition={{ duration: 0.5 }}
                 >
-                  <Link to="/signup" className="hidden md:block px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full text-sm font-medium text-white shadow-md hover:shadow-lg transition-all duration-300">
+                  <button 
+                    onClick={() => handleButtonClick('login')}
+                    className="relative z-10 px-4 py-2 text-sm font-medium transition-colors duration-300"
+                    style={{
+                      color: activeButton === 'login' ? 'white' : '#4b5563'
+                    }}
+                  >
+                    Login
+                  </button>
+                  {activeButton === 'login' && (
+                    <motion.div
+                      className="absolute inset-0 bg-blue-500 z-0"
+                      initial={{ x: '-100%' }}
+                      animate={{ x: 0 }}
+                      exit={{ x: '100%' }}
+                      transition={{ duration: 0.5, ease: 'easeInOut' }}
+                      layoutId="buttonBackground"
+                    />
+                  )}
+                </motion.div>
+
+                <motion.div 
+                  className="hidden md:block relative overflow-hidden rounded-full"
+                  initial={false}
+                  animate={{
+                    backgroundColor: activeButton === 'signup' ? '#3b82f6' : 'transparent'
+                  }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <button 
+                    onClick={() => handleButtonClick('signup')}
+                    className="relative z-10 px-6 py-2 text-sm font-medium transition-colors duration-300"
+                    style={{
+                      color: activeButton === 'signup' ? 'white' : '#4b5563'
+                    }}
+                  >
                     Sign Up
-                  </Link>
+                  </button>
+                  {activeButton === 'signup' && (
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 z-0"
+                      initial={{ x: '-100%' }}
+                      animate={{ x: 0 }}
+                      exit={{ x: '100%' }}
+                      transition={{ duration: 0.5, ease: 'easeInOut' }}
+                      layoutId="buttonBackground"
+                    />
+                  )}
                 </motion.div>
               </>
             ) : (
@@ -241,7 +293,6 @@ const Navbar = () => {
               <div className="flex flex-col space-y-3 px-2 py-4">
                 <MobileNavLink to="/" icon={<FiHome />} text="Home" onClick={() => setIsOpen(false)} />
                 <MobileNavLink to="/services" icon={<FiActivity />} text="Services" onClick={() => setIsOpen(false)} />
-                {/* Show Doctors tab only for HOD/Trustee in mobile view */}
                 {isAdmin && (
                   <MobileNavLink to="/doctors" icon={<FiUsers />} text="Doctors" onClick={() => setIsOpen(false)} />
                 )}
@@ -250,22 +301,59 @@ const Navbar = () => {
                 {!user ? (
                   <div className="flex flex-col space-y-3 pt-4">
                     <motion.div 
-                      whileHover={{ scale: 1.02 }} 
-                      whileTap={{ scale: 0.98 }}
-                      transition={{ type: 'spring', stiffness: 400 }}
+                      className="relative overflow-hidden rounded-lg"
+                      initial={false}
+                      animate={{
+                        backgroundColor: activeButton === 'login' ? '#3b82f6' : '#f9fafb'
+                      }}
+                      transition={{ duration: 0.5 }}
                     >
-                      <Link to="/login" className="w-full px-4 py-3 text-center bg-gray-50 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors duration-300">
+                      <button
+                        onClick={() => handleButtonClick('login')}
+                        className="relative z-10 w-full px-4 py-3 text-center font-medium transition-colors duration-300"
+                        style={{
+                          color: activeButton === 'login' ? 'white' : '#374151'
+                        }}
+                      >
                         Login
-                      </Link>
+                      </button>
+                      {activeButton === 'login' && (
+                        <motion.div
+                          className="absolute inset-0 bg-blue-500 z-0"
+                          initial={{ x: '-100%' }}
+                          animate={{ x: 0 }}
+                          exit={{ x: '100%' }}
+                          transition={{ duration: 0.5, ease: 'easeInOut' }}
+                          layoutId="mobileButtonBackground"
+                        />
+                      )}
                     </motion.div>
+
                     <motion.div 
-                      whileHover={{ scale: 1.02 }} 
-                      whileTap={{ scale: 0.98 }}
-                      transition={{ type: 'spring', stiffness: 400 }}
+                      className="relative overflow-hidden rounded-lg"
+                      initial={false}
+                      animate={{
+                        backgroundColor: activeButton === 'signup' ? '#3b82f6' : 'transparent',
+                        backgroundImage: activeButton === 'signup' ? 'none' : 'linear-gradient(to right, #3b82f6, #2563eb)'
+                      }}
+                      transition={{ duration: 0.5 }}
                     >
-                      <Link to="/signup" className="w-full px-4 py-3 text-center bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white font-medium hover:shadow-md transition-all duration-300">
+                      <button
+                        onClick={() => handleButtonClick('signup')}
+                        className="relative z-10 w-full px-4 py-3 text-center font-medium text-white transition-colors duration-300"
+                      >
                         Sign Up
-                      </Link>
+                      </button>
+                      {activeButton === 'signup' && (
+                        <motion.div
+                          className="absolute inset-0 bg-blue-500 z-0"
+                          initial={{ x: '-100%' }}
+                          animate={{ x: 0 }}
+                          exit={{ x: '100%' }}
+                          transition={{ duration: 0.5, ease: 'easeInOut' }}
+                          layoutId="mobileButtonBackground"
+                        />
+                      )}
                     </motion.div>
                   </div>
                 ) : (

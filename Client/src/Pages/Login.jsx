@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail, Shield, UserCircle, ArrowRight, Key } from "lucide-react";
 import { supabase } from "../helper/supabaseClient";
+import { FcGoogle } from "react-icons/fc";   
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -10,6 +11,7 @@ const Login = () => {
   const [message, setMessage] = useState({ text: "", type: "" });
   const [loading, setLoading] = useState(false);
   const [resetMode, setResetMode] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -55,6 +57,24 @@ const Login = () => {
       setPassword("");
     } finally {
       setLoading(false);
+    }
+  };
+
+
+  const handleGoogleLogin = async () => {
+    try {
+      setGoogleLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'http://localhost:5173/profile-completion'
+        }
+      });
+      if (error) throw error;
+    } catch (error) {
+      setMessage({ text: error?.message || "Google sign-in failed", type: "error" });
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -249,6 +269,34 @@ const Login = () => {
                   </>
                 )}
               </button>
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={googleLoading}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                {googleLoading ? (
+                  <svg className="animate-spin h-5 w-5 text-gray-700" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <>
+                    <FcGoogle className="h-5 w-5" />
+                    Sign in with Google
+                  </>
+                )}
+              </button>
+
             </form>
 
             {resetMode ? (
