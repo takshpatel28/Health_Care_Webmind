@@ -12,6 +12,11 @@ const Doctors = () => {
   const [viewingDoctor, setViewingDoctor] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [role, setrole] = useState("");
+  const [operationLoading, setOperationLoading] = useState({
+    delete: null,
+    edit: null,
+    add: false
+  });
 
   const [formData, setFormData] = useState({
     fullname: "",
@@ -21,25 +26,25 @@ const Doctors = () => {
   });
 
   // Get Doctor's Data
+  const fetchDoctors = async () => {
+    try {
+      const response = await fetch("https://health-care-webmind.onrender.com/api/trusty/getdoctors");
+      if (!response.ok) throw new Error("Failed to fetch doctors");
+
+      const data = await response.json();
+      setDoctors(data.doctorsData || data);
+    } catch (error) {
+      console.error("Error fetching doctors:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const response = await fetch("https://health-care-webmind.onrender.com/api/trusty/getdoctors");
-        if (!response.ok) throw new Error("Failed to fetch doctors");
-
-        const data = await response.json();
-        setDoctors(data.doctorsData || data);
-      } catch (error) {
-        console.error("Error fetching doctors:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDoctors();
   }, []);
 
-  // Get All Data From Table And Commpare With Auth ID
+  // Get All Data From Table And Compare With Auth ID
   const fetchHODs = async (userID) => {
     try {
       const { data, error } = await supabase
@@ -88,17 +93,21 @@ const Doctors = () => {
   const handleDelete = async (doctorId) => {
     if (window.confirm("Are you sure you want to delete this doctor?")) {
       try {
+        setOperationLoading({ ...operationLoading, delete: doctorId });
+
         const response = await axios.delete(`https://health-care-webmind.onrender.com/api/trusty/deletedoctor/${doctorId}`);
 
-        // Check for successful response (axios uses status codes directly)
         if (response.status === 200) {
-          setDoctors(doctors.filter(doctor => doctor.id !== doctorId));
+          // Refresh the doctors list after deletion
+          await fetchDoctors();
         } else {
           throw new Error("Failed to delete doctor");
         }
       } catch (error) {
         console.error("Error deleting doctor:", error);
         alert("Failed to delete doctor");
+      } finally {
+        setOperationLoading({ ...operationLoading, delete: null });
       }
     }
   };
@@ -130,24 +139,33 @@ const Doctors = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`https://health-care-webmind.onrender.com/api/trusty/updatedoctor/${editingDoctor.id}`, {
-        method: 'PUT',
+      setOperationLoading({ ...operationLoading, edit: editingDoctor?.id || 'add' });
+
+      const url = editingDoctor
+        ? `https://health-care-webmind.onrender.com/api/trusty/updatedoctor/${editingDoctor.id}`
+        : 'https://health-care-webmind.onrender.com/api/trusty/adddoctor';
+
+      const method = editingDoctor ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData)
       });
 
-      if (!response.ok) throw new Error("Failed to update doctor");
+      if (!response.ok) throw new Error(editingDoctor ? "Failed to update doctor" : "Failed to add doctor");
 
-      const updatedDoctor = await response.json();
-      setDoctors(doctors.map(doctor =>
-        doctor.id === updatedDoctor.id ? updatedDoctor : doctor
-      ));
+      // Refresh the doctors list after update/add
+      await fetchDoctors();
+
       setIsModalOpen(false);
     } catch (error) {
-      console.error("Error updating doctor:", error);
-      alert("Failed to update doctor");
+      console.error("Error updating/adding doctor:", error);
+      alert(editingDoctor ? "Failed to update doctor" : "Failed to add doctor");
+    } finally {
+      setOperationLoading({ ...operationLoading, edit: null, add: false });
     }
   };
 
@@ -169,8 +187,7 @@ const Doctors = () => {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                 />
               </svg>
             </div>
@@ -253,8 +270,15 @@ const Doctors = () => {
             {filteredDoctors.map((doctor) => (
               <div
                 key={doctor.id}
-                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100"
+                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 relative"
               >
+                {/* Improved loading overlay for delete operation */}
+                {operationLoading.delete === doctor.id && (
+                  <div className="absolute inset-0 backdrop-blur-sm bg-gradient-to-br from-blue-100/80 to-indigo-100/80 flex items-center justify-center z-10 rounded-xl">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                )}
+
                 <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-32 flex items-center justify-center">
                   <div className="bg-white p-2 rounded-full shadow-lg">
                     <svg
@@ -280,31 +304,39 @@ const Doctors = () => {
                       <p className="text-blue-600 font-semibold mb-3">{doctor.specialization}</p>
                     </div>
 
-
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleEditClick(doctor)}
                         className="p-2 text-blue-600 hover:text-blue-800 rounded-full hover:bg-blue-100 transition-colors"
                         title="Edit"
+                        disabled={operationLoading.edit === doctor.id}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
+                        {operationLoading.edit === doctor.id ? (
+                          <div className="h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        )}
                       </button>
 
-                      {
-                        role == "Trustee" ? <button
+                      {role == "Trustee" && (
+                        <button
                           onClick={() => handleDelete(doctor.id)}
                           className="p-2 text-red-600 hover:text-red-800 rounded-full hover:bg-red-100 transition-colors"
                           title="Delete"
+                          disabled={operationLoading.delete === doctor.id}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button> : ""
-                      }
+                          {operationLoading.delete === doctor.id ? (
+                            <div className="h-5 w-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
                     </div>
-
                   </div>
 
                   <div className="flex items-center text-gray-600 mb-2">
@@ -395,6 +427,7 @@ const Doctors = () => {
                 <button
                   onClick={() => setIsModalOpen(false)}
                   className="text-gray-500 hover:text-gray-700"
+                  disabled={operationLoading.edit || operationLoading.add}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -415,6 +448,7 @@ const Doctors = () => {
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
+                    disabled={operationLoading.edit || operationLoading.add}
                   />
                 </div>
 
@@ -430,6 +464,7 @@ const Doctors = () => {
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
+                    disabled={operationLoading.edit || operationLoading.add}
                   />
                 </div>
 
@@ -445,6 +480,7 @@ const Doctors = () => {
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
+                    disabled={operationLoading.edit || operationLoading.add}
                   />
                 </div>
 
@@ -460,6 +496,7 @@ const Doctors = () => {
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
+                    disabled={operationLoading.edit || operationLoading.add}
                   />
                 </div>
 
@@ -468,14 +505,23 @@ const Doctors = () => {
                     type="button"
                     onClick={() => setIsModalOpen(false)}
                     className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                    disabled={operationLoading.edit || operationLoading.add}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center min-w-32"
+                    disabled={operationLoading.edit || operationLoading.add}
                   >
-                    {editingDoctor ? "Update" : "Add"} Doctor
+                    {operationLoading.edit || operationLoading.add ? (
+                      <>
+                        <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        {editingDoctor ? "Updating..." : "Adding..."}
+                      </>
+                    ) : (
+                      editingDoctor ? "Update Doctor" : "Add Doctor"
+                    )}
                   </button>
                 </div>
               </form>
@@ -515,8 +561,7 @@ const Doctors = () => {
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          strokeWidth={1.5}
-                          d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          strokeWidth={1.5} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
                     </div>
@@ -548,8 +593,8 @@ const Doctors = () => {
                   </div>
 
                   <div className="mt-6 flex space-x-4">
-                    {
-                      role == "Trustee" ? <button
+                    {role == "Trustee" && (
+                      <button
                         onClick={() => {
                           setIsProfileModalOpen(false);
                           handleEditClick(viewingDoctor);
@@ -557,8 +602,8 @@ const Doctors = () => {
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         Edit Profile
-                      </button> : ""
-                    }
+                      </button>
+                    )}
 
                     <button
                       onClick={() => setIsProfileModalOpen(false)}

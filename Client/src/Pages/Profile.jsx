@@ -116,8 +116,8 @@ const Profile = () => {
         
         if (file) {
           const fileExt = file.name.split('.').pop();
-          const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-          const filePath = `doctor-images/${fileName}`;
+          const fileName = `${user.id}.${fileExt}`;
+          var filePath = `doctor-images/${fileName}`;
 
           // Delete old image if exists
           if (profileImage) {
@@ -147,13 +147,10 @@ const Profile = () => {
       }
 
       // Update the profile data
-      const { error } = await supabase
-        .from('doctors')
-        .upsert({
-          id: user.id,
-          ...tempFormData,
-          avatar_url: newProfileImage,
-        });
+      const { error } = await supabase.storage.from('doctor-images').upload(filePath, profileImage, {
+        cacheControl: '3600',
+        upsert: false
+      })
 
       if (error) throw error;
 
