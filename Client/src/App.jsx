@@ -11,6 +11,7 @@ import Profile from './Pages/Profile'
 import Footer from './Pages/Footer'
 import HOD from './Components/HOD'
 import Home from './Pages/Home'
+import About from './Pages/About'
 
 const App = () => {
   return (
@@ -25,6 +26,8 @@ const App = () => {
         <Route path='/signup' element={<Register />}/>
         <Route path='/update-password' element={<ResetPassword />}/>
         <Route path='/login' element={<Login />}/>
+        <Route path='/about' element={<About />}/>
+
         <Route path='/doctors' element={
           <Wrapper>
           <Doctors />
