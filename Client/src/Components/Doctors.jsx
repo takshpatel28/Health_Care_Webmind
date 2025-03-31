@@ -215,7 +215,7 @@ const Doctors = () => {
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <Sidebar />
-      <div className="p-6 w-full md:w-4/5">
+      <div className="p-6 w-full md:w-4/5 mt-7">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-4 md:mb-0">
             Our <span className="text-blue-600">Medical</span> Team
@@ -244,7 +244,7 @@ const Doctors = () => {
                 />
               </svg>
             </div>
-            <button
+            {/* <button
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center"
               onClick={() => {
                 setEditingDoctor(null);
@@ -261,7 +261,7 @@ const Doctors = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
               Add Doctor
-            </button>
+            </button> */}
           </div>
         </div>
 
