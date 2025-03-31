@@ -12,7 +12,11 @@ import Footer from './Pages/Footer'
 import HOD from './Components/HOD'
 import Home from './Pages/Home'
 import Services from './Pages/Service'
+<<<<<<< HEAD
 import ProfileCompletion from './Pages/ProfileCompletion'
+=======
+import About from './Pages/About'
+>>>>>>> 8186b3fe70e0b3f96fc89ea0193c80bff70ecca9
 
 const App = () => {
   return (
@@ -27,6 +31,7 @@ const App = () => {
         <Route path='/signup' element={<Register />}/>
         <Route path='/update-password' element={<ResetPassword />}/>
         <Route path='/login' element={<Login />}/>
+        <Route path='/about' element={<About />}/>
         <Route path='/doctors' element={
           <Wrapper>
           <Doctors />

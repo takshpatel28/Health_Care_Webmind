@@ -5,74 +5,66 @@ import Sidebar from "../Components/Sidebar";
 
 const Dashboard = () => {
   const [userInfo, setUserInfo] = useState(null);
-  const [doctorsCount, setDoctorsCount] = useState(0);
-  const [hodsCount, setHodsCount] = useState(0);
+  const [allDoctors, setAllDoctors] = useState([]);
+  const [departmentDoctors, setDepartmentDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchCounts = async () => {
-      try {
-        // Fetch doctors count
-        const doctorsResponse = await fetch("https://health-care-webmind.onrender.com/api/hod");
-        if (!doctorsResponse.ok) throw new Error("Failed to fetch doctors");
-        const doctorsData = await doctorsResponse.json();
-        
-        // Make sure the data structure matches what you expect
-        const doctors = doctorsData.doctorsData || doctorsData || [];
-        setDoctorsCount(doctors.length);
-
-        // Fetch HODs count (only for trustees)
-        const { count, error } = await supabase
-          .from("doctors")
-          .select("*", { count: 'exact', head: true })
-          .eq("role", "HOD");
-        
-        if (error) {
-          console.error("Error fetching HODs:", error);
-        } else {
-          setHodsCount(count || 0);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCounts();
-  }, []);
-
-  useEffect(() => {
-    const fetchUserInfo = async () => {
+    const fetchUserAndDoctors = async () => {
       setLoading(true);
       try {
+        // Get session from local storage
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
         if (sessionError || !sessionData?.session) {
           console.error("Session error:", sessionError);
           navigate("/login");
           return;
         }
         
+        // Get user ID from session
         const userID = sessionData.session.user.id;
-        const { data: userData, error: userError } = await supabase
-          .from("doctors")
-          .select("*")
-          .eq("id", userID)
-          .single();
         
-        if (userError) {
-          console.error("Error fetching user:", userError);
+        // Fetch all doctors
+        const { data: doctorsData, error: doctorsError } = await supabase
+          .from("doctors")
+          .select("*");
+        
+        if (doctorsError) {
+          console.error("Error fetching doctors:", doctorsError);
           return;
         }
         
-        setUserInfo(userData);
+        setAllDoctors(doctorsData || []);
+        
+        // Find current user in doctors list
+        const currentUser = doctorsData.find(doctor => doctor.id === userID);
+        
+        if (!currentUser) {
+          console.error("User not found in doctors table");
+          navigate("/login");
+          return;
+        }
+        
+        setUserInfo(currentUser);
+        
+        // If user is HOD, filter doctors by their department
+        if (currentUser.role === "HOD" && currentUser.department) {
+          const deptDoctors = doctorsData.filter(
+            doctor => doctor.department === currentUser.department
+          );
+          setDepartmentDoctors(deptDoctors);
+        }
+        
       } catch (error) {
-        console.error("Error in fetchUserInfo:", error);
+        console.error("Error in fetchUserAndDoctors:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchUserInfo();
+    
+    fetchUserAndDoctors();
   }, [navigate]);
 
   if (loading) {
@@ -103,6 +95,11 @@ const Dashboard = () => {
     );
   }
 
+  // Calculate counts based on role
+  const doctorsCount = allDoctors.length;
+  const hodsCount = allDoctors.filter(doctor => doctor.role === "HOD").length;
+  const departmentDoctorsCount = departmentDoctors.length;
+
   // Stats for HOD
   const hodStats = [
     {
@@ -115,20 +112,21 @@ const Dashboard = () => {
       )
     },
     {
-      title: "Experience",
-      value: userInfo?.experienceyears ? `${userInfo.experienceyears} Years` : "N/A",
+      title: "Department Doctors",
+      value: departmentDoctorsCount,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       )
     },
     {
-      title: "Category",
-      value: userInfo?.departmentCategory || "N/A",
+      title: "Role",
+      value: userInfo?.role || "N/A",
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       )
     }
@@ -224,61 +222,90 @@ const Dashboard = () => {
           <section className="mb-12">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-semibold text-gray-800">
-                Recent Activity
+                Department Doctors
               </h2>
-              <button className="text-sm font-medium text-blue-600 hover:text-blue-700">
+              <Link to="/doctors" className="text-sm font-medium text-blue-600 hover:text-blue-700">
                 View All
-              </button>
+              </Link>
             </div>
             <div className="space-y-4">
-              {[
-                {
-                  icon: (
-                    <div className="rounded-full bg-blue-100 p-2 text-blue-600">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                      </svg>
-                    </div>
-                  ),
-                  title: "System Update",
-                  description: "DoctorMS has been updated to version 2.1.0",
-                  time: "2 hours ago",
-                  color: "blue"
-                },
-                {
-                  icon: (
-                    <div className="rounded-full bg-amber-100 p-2 text-amber-600">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  ),
-                  title: "Schedule Update",
-                  description: "Your schedule for next week has been updated",
-                  time: "1 day ago",
-                  color: "amber"
-                },
-              ].map((activity, index) => (
+              {departmentDoctors.slice(0, 3).map((doctor) => (
                 <div
-                  key={index}
-                  className="flex items-start rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md"
+                  key={doctor.id}
+                  className="flex items-center rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md"
                 >
-                  <div className="mr-4 mt-1">
-                    {activity.icon}
+                  <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                    {doctor.fullname.charAt(0)}
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-gray-800">
-                      {activity.title}
+                      {doctor.fullname}
                     </h3>
-                    <p className="text-gray-600">{activity.description}</p>
-                    <div className="mt-2 flex items-center text-sm text-gray-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {activity.time}
+                    <p className="text-gray-600">{doctor.specialization || "General Physician"}</p>
+                  </div>
+                  <Link 
+                    to={`/doctor-profile/${doctor.id}`}
+                    className="rounded bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
+                  >
+                    View Profile
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Trustee-specific content - Doctor Management */}
+        {userInfo?.role === "Trustee" && (
+          <section className="mb-12">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-2xl font-semibold text-gray-800">
+                Doctor Management
+              </h2>
+              <Link to="/doctors" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                View All Doctors
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {allDoctors.slice(0, 3).map((doctor) => (
+                <div
+                  key={doctor.id}
+                  className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md"
+                >
+                  <div className="mb-4 flex items-center">
+                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                      {doctor.fullname.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-800">{doctor.fullname}</h3>
+                      <p className="text-sm text-gray-500">{doctor.role} - {doctor.department}</p>
                     </div>
                   </div>
-                  <div className={`ml-4 h-full w-1 rounded-full bg-${activity.color}-500`}></div>
+                  <div className="flex space-x-2">
+                    <Link
+                      to={`/edit-doctor/${doctor.id}`}
+                      className="flex-1 rounded bg-amber-50 px-3 py-1 text-center text-sm font-medium text-amber-600 hover:bg-amber-100"
+                    >
+                      Edit
+                    </Link>
+                    <Link
+                      to={`/doctor-profile/${doctor.id}`}
+                      className="flex-1 rounded bg-blue-50 px-3 py-1 text-center text-sm font-medium text-blue-600 hover:bg-blue-100"
+                    >
+                      Profile
+                    </Link>
+                    <button
+                      onClick={() => {
+                        // Implement delete functionality
+                        if (window.confirm(`Are you sure you want to delete ${doctor.fullname}?`)) {
+                          // Call delete function
+                        }
+                      }}
+                      className="flex-1 rounded bg-red-50 px-3 py-1 text-center text-sm font-medium text-red-600 hover:bg-red-100"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -295,7 +322,7 @@ const Dashboard = () => {
                 Department Overview
               </h2>
               <p className="mb-6 text-blue-100">DEPARTMENT STAFF</p>
-              <p className="my-4 text-6xl font-bold">{doctorsCount}</p>
+              <p className="my-4 text-6xl font-bold">{departmentDoctorsCount}</p>
               <p className="mb-8 text-xl font-medium text-blue-100">Doctors in your department</p>
               <Link to="/doctors">
                 <button className="rounded-lg bg-white px-8 py-3 font-semibold text-blue-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
@@ -306,7 +333,7 @@ const Dashboard = () => {
           </section>
         )}
 
-        {/* Trustee-specific content */}
+        {/* Trustee-specific overview */}
         {userInfo?.role === "Trustee" && (
           <section className="relative overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-purple-500 p-8 text-center text-white shadow-lg">
             <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-white bg-opacity-10"></div>
@@ -326,11 +353,18 @@ const Dashboard = () => {
                   <p className="text-xl font-medium text-indigo-100">HODs</p>
                 </div>
               </div>
-              <Link to="/doctors">
-                <button className="rounded-lg bg-white px-8 py-3 font-semibold text-indigo-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
-                  View All Staff →
-                </button>
-              </Link>
+              <div className="flex justify-center space-x-4">
+                <Link to="/doctors">
+                  <button className="rounded-lg bg-white px-8 py-3 font-semibold text-indigo-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
+                    View All Staff →
+                  </button>
+                </Link>
+                <Link to="/add-doctor">
+                  <button className="rounded-lg bg-indigo-700 px-8 py-3 font-semibold text-white shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
+                    Add New Doctor →
+                  </button>
+                </Link>
+              </div>
             </div>
           </section>
         )}

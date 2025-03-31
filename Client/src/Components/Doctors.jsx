@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import axios from 'axios'
+import { supabase } from "../helper/supabaseClient";
 
 const Doctors = () => {
   const [doctors, setDoctors] = useState([]);
@@ -10,6 +11,8 @@ const Doctors = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewingDoctor, setViewingDoctor] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [role, setrole] = useState("");
+
   const [formData, setFormData] = useState({
     fullname: "",
     specialization: "",
@@ -17,6 +20,7 @@ const Doctors = () => {
     phonenumber: ""
   });
 
+  // Get Doctor's Data
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
@@ -35,6 +39,47 @@ const Doctors = () => {
     fetchDoctors();
   }, []);
 
+  // Get All Data From Table And Commpare With Auth ID
+  const fetchHODs = async (userID) => {
+    try {
+      const { data, error } = await supabase
+        .from('doctors')
+        .select()
+
+      // Convert both IDs to strings before comparing
+      const matchedData = data.find(e => String(e.id) === String(userID));
+      setrole(matchedData.role)
+
+    } catch (error) {
+      console.error("🚨 Error fetching HODs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get Login Session From Supabase
+  useEffect(() => {
+    const fetchAuthID = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        const userID = data?.session?.user?.id;
+
+        if (!userID) {
+          console.warn("❌ No authenticated user found.");
+          return;
+        }
+
+        fetchHODs(userID); // Fetch HODs after getting user ID
+      } catch (err) {
+        console.error("🚨 Error fetching auth ID:", err);
+      }
+    };
+
+    fetchAuthID();
+  }, []);
+
   const filteredDoctors = doctors.filter(doctor =>
     doctor.fullname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     doctor.specialization?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -44,7 +89,7 @@ const Doctors = () => {
     if (window.confirm("Are you sure you want to delete this doctor?")) {
       try {
         const response = await axios.delete(`https://health-care-webmind.onrender.com/api/trusty/deletedoctor/${doctorId}`);
-        
+
         // Check for successful response (axios uses status codes directly)
         if (response.status === 200) {
           setDoctors(doctors.filter(doctor => doctor.id !== doctorId));
@@ -92,11 +137,11 @@ const Doctors = () => {
         },
         body: JSON.stringify(formData)
       });
-      
+
       if (!response.ok) throw new Error("Failed to update doctor");
-      
+
       const updatedDoctor = await response.json();
-      setDoctors(doctors.map(doctor => 
+      setDoctors(doctors.map(doctor =>
         doctor.id === updatedDoctor.id ? updatedDoctor : doctor
       ));
       setIsModalOpen(false);
@@ -138,7 +183,7 @@ const Doctors = () => {
           </p>
           <div className="flex space-x-4">
             {[...Array(5)].map((_, i) => (
-              <div 
+              <div
                 key={i}
                 className="w-4 h-4 bg-blue-600 rounded-full animate-bounce"
                 style={{ animationDelay: `${i * 0.1}s` }}
@@ -182,7 +227,7 @@ const Doctors = () => {
                 />
               </svg>
             </div>
-            <button 
+            <button
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center"
               onClick={() => {
                 setEditingDoctor(null);
@@ -234,8 +279,10 @@ const Doctors = () => {
                       <h2 className="text-xl font-bold text-gray-800 mb-1">{doctor.fullname}</h2>
                       <p className="text-blue-600 font-semibold mb-3">{doctor.specialization}</p>
                     </div>
+
+
                     <div className="flex space-x-2">
-                      <button 
+                      <button
                         onClick={() => handleEditClick(doctor)}
                         className="p-2 text-blue-600 hover:text-blue-800 rounded-full hover:bg-blue-100 transition-colors"
                         title="Edit"
@@ -244,18 +291,22 @@ const Doctors = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
-                      <button 
-                        onClick={() => handleDelete(doctor.id)}
-                        className="p-2 text-red-600 hover:text-red-800 rounded-full hover:bg-red-100 transition-colors"
-                        title="Delete"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+
+                      {
+                        role == "Trustee" ? <button
+                          onClick={() => handleDelete(doctor.id)}
+                          className="p-2 text-red-600 hover:text-red-800 rounded-full hover:bg-red-100 transition-colors"
+                          title="Delete"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button> : ""
+                      }
                     </div>
+
                   </div>
-                  
+
                   <div className="flex items-center text-gray-600 mb-2">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -273,7 +324,7 @@ const Doctors = () => {
                     </svg>
                     {doctor.experienceyears} Years Experience
                   </div>
-                  
+
                   <div className="flex items-center text-gray-600 mb-6">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -291,9 +342,9 @@ const Doctors = () => {
                     </svg>
                     {doctor.phonenumber}
                   </div>
-                  
+
                   <div className="flex space-x-3">
-                    <button 
+                    <button
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-300"
                       onClick={() => handleViewProfile(doctor)}
                     >
@@ -322,7 +373,7 @@ const Doctors = () => {
             </svg>
             <h3 className="text-2xl font-medium text-gray-700 mb-2">No doctors found</h3>
             <p className="text-gray-500 mb-6">Try adjusting your search criteria</p>
-            <button 
+            <button
               onClick={() => setSearchTerm("")}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300"
             >
@@ -341,7 +392,7 @@ const Doctors = () => {
                 <h2 className="text-2xl font-bold text-gray-800">
                   {editingDoctor ? "Edit Doctor" : "Add New Doctor"}
                 </h2>
-                <button 
+                <button
                   onClick={() => setIsModalOpen(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -350,7 +401,7 @@ const Doctors = () => {
                   </svg>
                 </button>
               </div>
-              
+
               <form onSubmit={handleSubmit}>
                 <div className="mb-4">
                   <label className="block text-gray-700 mb-2" htmlFor="fullname">
@@ -366,7 +417,7 @@ const Doctors = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="mb-4">
                   <label className="block text-gray-700 mb-2" htmlFor="specialization">
                     Specialization
@@ -381,7 +432,7 @@ const Doctors = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="mb-4">
                   <label className="block text-gray-700 mb-2" htmlFor="experienceyears">
                     Years of Experience
@@ -396,7 +447,7 @@ const Doctors = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="mb-6">
                   <label className="block text-gray-700 mb-2" htmlFor="phonenumber">
                     Phone Number
@@ -411,7 +462,7 @@ const Doctors = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="flex justify-end space-x-4">
                   <button
                     type="button"
@@ -440,7 +491,7 @@ const Doctors = () => {
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">Doctor Profile</h2>
-                <button 
+                <button
                   onClick={() => setIsProfileModalOpen(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -449,7 +500,7 @@ const Doctors = () => {
                   </svg>
                 </button>
               </div>
-              
+
               <div className="flex flex-col md:flex-row gap-8">
                 <div className="flex-shrink-0">
                   <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-48 w-48 rounded-full flex items-center justify-center mx-auto">
@@ -471,41 +522,44 @@ const Doctors = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex-grow">
                   <h3 className="text-2xl font-bold text-gray-800 mb-2">{viewingDoctor.fullname}</h3>
                   <p className="text-blue-600 font-semibold mb-6">{viewingDoctor.specialization}</p>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="text-sm font-medium text-gray-500 mb-2">EXPERIENCE</h4>
                       <p className="text-lg font-semibold text-gray-800">{viewingDoctor.experienceyears} Years</p>
                     </div>
-                    
+
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="text-sm font-medium text-gray-500 mb-2">CONTACT</h4>
                       <p className="text-lg font-semibold text-gray-800">{viewingDoctor.phonenumber}</p>
                     </div>
-                    
+
                     <div className="bg-gray-50 p-4 rounded-lg md:col-span-2">
                       <h4 className="text-sm font-medium text-gray-500 mb-2">ABOUT</h4>
                       <p className="text-gray-700">
-                        Dr. {viewingDoctor.fullname} is a specialist in {viewingDoctor.specialization.toLowerCase()} with {viewingDoctor.experienceyears} years of experience. 
+                        Dr. {viewingDoctor.fullname} is a specialist in {viewingDoctor.specialization.toLowerCase()} with {viewingDoctor.experienceyears} years of experience.
                         Committed to providing the highest quality care to all patients.
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="mt-6 flex space-x-4">
-                    <button
-                      onClick={() => {
-                        setIsProfileModalOpen(false);
-                        handleEditClick(viewingDoctor);
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Edit Profile
-                    </button>
+                    {
+                      role == "Trustee" ? <button
+                        onClick={() => {
+                          setIsProfileModalOpen(false);
+                          handleEditClick(viewingDoctor);
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Edit Profile
+                      </button> : ""
+                    }
+
                     <button
                       onClick={() => setIsProfileModalOpen(false)}
                       className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
