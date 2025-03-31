@@ -110,7 +110,7 @@ const Navbar = () => {
             <NavLink to="/services" icon={<FiActivity />} text="Services" />
             {/* Show Doctors tab only for HOD/Trustee */}
             {isAdmin && (
-              <NavLink to="/my_doctors" icon={<FiUsers />} text="Doctors" />
+              <NavLink to="/doctors" icon={<FiUsers />} text="Doctors" />
             )}
             <NavLink to="/about" icon={<FiInfo />} text="About" />
           </div>
@@ -243,7 +243,7 @@ const Navbar = () => {
                 <MobileNavLink to="/services" icon={<FiActivity />} text="Services" onClick={() => setIsOpen(false)} />
                 {/* Show Doctors tab only for HOD/Trustee in mobile view */}
                 {isAdmin && (
-                  <MobileNavLink to="/my_doctors" icon={<FiUsers />} text="Doctors" onClick={() => setIsOpen(false)} />
+                  <MobileNavLink to="/doctors" icon={<FiUsers />} text="Doctors" onClick={() => setIsOpen(false)} />
                 )}
                 <MobileNavLink to="/about" icon={<FiInfo />} text="About" onClick={() => setIsOpen(false)} />
 
