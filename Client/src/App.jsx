@@ -11,13 +11,12 @@ import Profile from './Pages/Profile'
 import Footer from './Pages/Footer'
 import HOD from './Components/HOD'
 import Home from './Pages/Home'
+import Services from './Pages/Service'
 
 const App = () => {
   return (
     <BrowserRouter>
-      <Navbar />
-      <br />
-      <br />
+    <Navbar /><br /><br />
       <Routes>
         <Route path='/' element={<Home />} />
         <Route path='/dashboard' element={
@@ -32,11 +31,12 @@ const App = () => {
           <Doctors />
           </Wrapper>}/>
         <Route path='/hods' element={<HOD />}/>
+        <Route path='/services' element={<Services />}/>
         <Route path='/profile' element={<Profile />}/>
       </Routes>
       <Footer />
     </BrowserRouter>
-  );
-};
+  )
+}
 
-export default App;
+export default App
