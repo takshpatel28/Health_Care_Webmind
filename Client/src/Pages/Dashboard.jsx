@@ -2,22 +2,13 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../helper/supabaseClient";
 import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../Components/Sidebar";
-import DoctorProfileModal from "../Components/DoctorProfileModal";
-import EditDoctorModal from "../Components/EditDoctorModal";
-
-// Helper function to safely get initials
-const getInitial = (name) => {
-  return name?.charAt(0)?.toUpperCase() || '?';
-};
 
 const Dashboard = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [allDoctors, setAllDoctors] = useState([]);
   const [departmentDoctors, setDepartmentDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [DoctorCount, setDoctorsCount] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,146 +17,75 @@ const Dashboard = () => {
       try {
         // Get session from local storage
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError || !sessionData?.session) {
           console.error("Session error:", sessionError);
           navigate("/login");
           return;
         }
-        
+
         // Get user ID from session
         const userID = sessionData.session.user.id;
-        
-        // Fetch all doctors with validation
+
+        // Fetch all doctors
         const { data: doctorsData, error: doctorsError } = await supabase
           .from("doctors")
           .select("*");
-        
+
         if (doctorsError) {
           console.error("Error fetching doctors:", doctorsError);
           return;
         }
-        
-        // Validate and set doctors data
-        const validatedDoctors = (doctorsData || []).map(doctor => ({
-          ...doctor,
-          fullname: doctor.fullname || 'Unknown Doctor',
-          department: doctor.department || 'Unassigned',
-          role: doctor.role || 'Doctor'
-        }));
-        
-        setAllDoctors(validatedDoctors);
-        
+
+        setAllDoctors(doctorsData || []);
+
         // Find current user in doctors list
-        const currentUser = validatedDoctors.find(doctor => doctor.id === userID);
-        
+        const currentUser = doctorsData.find(doctor => doctor.id === userID);
+
         if (!currentUser) {
           console.error("User not found in doctors table");
           navigate("/login");
           return;
         }
-        
+
         setUserInfo(currentUser);
-        
+
         // If user is HOD, filter doctors by their department
         if (currentUser.role === "HOD" && currentUser.department) {
-          const deptDoctors = validatedDoctors.filter(
+          const deptDoctors = doctorsData.filter(
             doctor => doctor.department === currentUser.department
           );
           setDepartmentDoctors(deptDoctors);
         }
-        
+
       } catch (error) {
         console.error("Error in fetchUserAndDoctors:", error);
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchUserAndDoctors();
   }, [navigate]);
+  
 
-  // Calculate counts based on role
-  const doctorsCount = userInfo?.role === "HOD" ? departmentDoctors.length : allDoctors.length;
-  const hodsCount = userInfo?.role === "HOD" 
-    ? departmentDoctors.filter(doctor => doctor.role === "HOD").length 
-    : allDoctors.filter(doctor => doctor.role === "HOD").length;
-
-  const openProfileModal = (doctor) => {
-    setSelectedDoctor(doctor);
-    setShowProfileModal(true);
-  };
-
-  const openEditModal = (doctor) => {
-    setSelectedDoctor(doctor);
-    setShowEditModal(true);
-  };
-
-  const closeModals = () => {
-    setShowProfileModal(false);
-    setShowEditModal(false);
-    setSelectedDoctor(null);
-  };
-
-  const handleDoctorUpdate = async (updatedData) => {
+  const fetchDoctors = async () => {
     try {
-      const { error } = await supabase
-        .from('doctors')
-        .update(updatedData)
-        .eq('id', selectedDoctor.id);
+      const response = await fetch("https://health-care-webmind.onrender.com/api/trusty/getdoctors");
+      if (!response.ok) throw new Error("Failed to fetch doctors");
 
-      if (error) throw error;
-
-      // Refresh doctor data
-      const { data: doctorsData, error: doctorsError } = await supabase
-        .from("doctors")
-        .select("*");
-
-      if (!doctorsError) {
-        setAllDoctors(doctorsData);
-        if (userInfo?.role === "HOD" && userInfo?.department) {
-          const deptDoctors = doctorsData.filter(
-            doctor => doctor.department === userInfo.department
-          );
-          setDepartmentDoctors(deptDoctors);
-        }
-      }
-      
-      closeModals();
+      const data = await response.json();
+      setDoctorsCount(data.doctorsData.length);
     } catch (error) {
-      console.error("Error updating doctor:", error);
+      console.error("Error fetching doctors:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteDoctor = async (doctorId) => {
-    if (window.confirm("Are you sure you want to delete this doctor?")) {
-      try {
-        const { error } = await supabase
-          .from('doctors')
-          .delete()
-          .eq('id', doctorId);
-
-        if (error) throw error;
-
-        // Refresh doctor data
-        const { data: doctorsData, error: doctorsError } = await supabase
-          .from("doctors")
-          .select("*");
-
-        if (!doctorsError) {
-          setAllDoctors(doctorsData);
-          if (userInfo?.role === "HOD" && userInfo?.department) {
-            const deptDoctors = doctorsData.filter(
-              doctor => doctor.department === userInfo.department
-            );
-            setDepartmentDoctors(deptDoctors);
-          }
-        }
-      } catch (error) {
-        console.error("Error deleting doctor:", error);
-      }
-    }
-  };
+  useEffect(() => {
+    fetchDoctors();
+  }, []);
 
   if (loading) {
     return (
@@ -184,7 +104,7 @@ const Dashboard = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-800">User data not available</h2>
           <p className="mt-2 text-gray-600">Please try logging in again</p>
-          <button 
+          <button
             onClick={() => navigate("/login")}
             className="mt-4 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
           >
@@ -194,6 +114,11 @@ const Dashboard = () => {
       </div>
     );
   }
+
+  // Calculate counts based on role
+  const doctorsCount = allDoctors.length;
+  const hodsCount = allDoctors.filter(doctor => doctor.role === "HOD").length;
+  const departmentDoctorsCount = departmentDoctors.length;
 
   // Stats for HOD
   const hodStats = [
@@ -208,7 +133,7 @@ const Dashboard = () => {
     },
     {
       title: "Department Doctors",
-      value: departmentDoctors.length,
+      value: departmentDoctorsCount,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -216,11 +141,12 @@ const Dashboard = () => {
       )
     },
     {
-      title: "HODs in Dept",
-      value: departmentDoctors.filter(d => d.role === "HOD").length,
+      title: "Role",
+      value: userInfo?.role || "N/A",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       )
     }
@@ -230,7 +156,7 @@ const Dashboard = () => {
   const trusteeStats = [
     {
       title: "Total Doctors",
-      value: allDoctors.length,
+      value: DoctorCount,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -239,7 +165,7 @@ const Dashboard = () => {
     },
     {
       title: "Total HODs",
-      value: allDoctors.filter(d => d.role === "HOD").length,
+      value: hodsCount,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -247,11 +173,12 @@ const Dashboard = () => {
       )
     },
     {
-      title: "Departments",
-      value: [...new Set(allDoctors.map(d => d.department))].length,
+      title: "Role",
+      value: userInfo?.role || "N/A",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       )
     }
@@ -328,7 +255,7 @@ const Dashboard = () => {
                   className="flex items-center rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md"
                 >
                   <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                    {getInitial(doctor.fullname)}
+                    {doctor.fullname.charAt(0)}
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-gray-800">
@@ -336,12 +263,12 @@ const Dashboard = () => {
                     </h3>
                     <p className="text-gray-600">{doctor.specialization || "General Physician"}</p>
                   </div>
-                  <button
-                    onClick={() => openProfileModal(doctor)}
+                  <Link
+                    to={`/doctor-profile/${doctor.id}`}
                     className="rounded bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
                   >
                     View Profile
-                  </button>
+                  </Link>
                 </div>
               ))}
             </div>
@@ -367,7 +294,7 @@ const Dashboard = () => {
                 >
                   <div className="mb-4 flex items-center">
                     <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                      {getInitial(doctor.fullname)}
+                      {doctor.fullname.charAt(0)}
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-800">{doctor.fullname}</h3>
@@ -375,20 +302,18 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    <button
-                      onClick={() => openEditModal(doctor)}
-                      className="flex-1 rounded bg-amber-50 px-3 py-1 text-center text-sm font-medium text-amber-600 hover:bg-amber-100"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => openProfileModal(doctor)}
+                    <Link
                       className="flex-1 rounded bg-blue-50 px-3 py-1 text-center text-sm font-medium text-blue-600 hover:bg-blue-100"
                     >
                       Profile
-                    </button>
+                    </Link>
                     <button
-                      onClick={() => handleDeleteDoctor(doctor.id)}
+                      onClick={() => {
+                        // Implement delete functionality
+                        if (window.confirm(`Are you sure you want to delete ${doctor.fullname}?`)) {
+                          // Call delete function
+                        }
+                      }}
                       className="flex-1 rounded bg-red-50 px-3 py-1 text-center text-sm font-medium text-red-600 hover:bg-red-100"
                     >
                       Delete
@@ -410,7 +335,7 @@ const Dashboard = () => {
                 Department Overview
               </h2>
               <p className="mb-6 text-blue-100">DEPARTMENT STAFF</p>
-              <p className="my-4 text-6xl font-bold">{departmentDoctors.length}</p>
+              <p className="my-4 text-6xl font-bold">{departmentDoctorsCount}</p>
               <p className="mb-8 text-xl font-medium text-blue-100">Doctors in your department</p>
               <Link to="/doctors">
                 <button className="rounded-lg bg-white px-8 py-3 font-semibold text-blue-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
@@ -433,11 +358,11 @@ const Dashboard = () => {
               <p className="mb-6 text-indigo-100">TOTAL STAFF</p>
               <div className="flex justify-center space-x-12 my-4">
                 <div>
-                  <p className="text-6xl font-bold">{allDoctors.length}</p>
+                  <p className="text-6xl font-bold">{doctorsCount}</p>
                   <p className="text-xl font-medium text-indigo-100">Doctors</p>
                 </div>
                 <div>
-                  <p className="text-6xl font-bold">{allDoctors.filter(d => d.role === "HOD").length}</p>
+                  <p className="text-6xl font-bold">{hodsCount}</p>
                   <p className="text-xl font-medium text-indigo-100">HODs</p>
                 </div>
               </div>
@@ -455,23 +380,6 @@ const Dashboard = () => {
               </div>
             </div>
           </section>
-        )}
-
-        {/* Profile Modal */}
-        {showProfileModal && selectedDoctor && (
-          <DoctorProfileModal 
-            doctor={selectedDoctor} 
-            onClose={closeModals} 
-          />
-        )}
-
-        {/* Edit Modal */}
-        {showEditModal && selectedDoctor && (
-          <EditDoctorModal 
-            doctor={selectedDoctor} 
-            onClose={closeModals}
-            onUpdate={handleDoctorUpdate}
-          />
         )}
       </main>
     </div>

@@ -32,6 +32,8 @@ const Doctors = () => {
       if (!response.ok) throw new Error("Failed to fetch doctors");
 
       const data = await response.json();
+      console.log(data.doctorsData.length);
+      
       setDoctors(data.doctorsData || data);
     } catch (error) {
       console.error("Error fetching doctors:", error);
