@@ -65,18 +65,19 @@ const Login = () => {
     try {
       setGoogleLoading(true);
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/profile-completion`, // Dynamically set the redirect URL
+          redirectTo: `${window.location.origin}/auth/callback`, // Redirect to a handler page
         },
       });
       if (error) throw error;
     } catch (error) {
-      setMessage({ text: error?.message || "Google sign-in failed", type: "error" });
+      setMessage({ text: error.message || "Google sign-in failed", type: "error" });
     } finally {
       setGoogleLoading(false);
     }
   };
+  
 
   const handleResetPassword = async () => {
     if (!email) {
