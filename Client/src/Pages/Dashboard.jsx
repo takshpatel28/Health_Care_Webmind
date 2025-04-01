@@ -188,7 +188,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-800 md:text-4xl lg:text-5xl">
-                Welcome back, <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">{userInfo?.fullname}</span>
+                Welcome back, <span className="bg-gradient-to-r from-blue-600+ to-cyan-500 bg-clip-text text-transparent">{userInfo?.fullname}</span>
               </h1>
               {userInfo?.role === "HOD" ? (
                 <p className="mt-2 text-lg text-gray-500">
