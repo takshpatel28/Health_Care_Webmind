@@ -65,19 +65,18 @@ const Login = () => {
     try {
       setGoogleLoading(true);
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
+        provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`, // Redirect to a handler page
-        },
+          redirectTo: 'https://health-care-webmind-1.onrender.com/profile-completion'
+        }
       });
       if (error) throw error;
     } catch (error) {
-      setMessage({ text: error.message || "Google sign-in failed", type: "error" });
+      setMessage({ text: error?.message || "Google sign-in failed", type: "error" });
     } finally {
       setGoogleLoading(false);
     }
   };
-  
 
   const handleResetPassword = async () => {
     if (!email) {
@@ -88,7 +87,7 @@ const Login = () => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`,
+        redirectTo: "https://health-care-webmind-1.onrender.com/update-password",
       });
 
       if (error) throw error;
