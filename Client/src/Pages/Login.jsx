@@ -67,7 +67,7 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'http://localhost:5173/profile-completion'
+          redirectTo: 'https://health-care-webmind-1.onrender.com/profile-completion'
         }
       });
       if (error) throw error;
@@ -87,7 +87,7 @@ const Login = () => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "http://localhost:5173/update-password",
+        redirectTo: "https://health-care-webmind-1.onrender.com/update-password",
       });
 
       if (error) throw error;
