@@ -72,20 +72,57 @@ const Profile = () => {
     const { name, value } = e.target;
     setTempFormData(prev => ({ ...prev, [name]: value }));
   };
-
-  const handleImageUpload = async (e) => {
-    try {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      // Store the file temporarily
-      const objectUrl = URL.createObjectURL(file);
-      setTempProfileImage(objectUrl);
-
-    } catch (error) {
-      console.error('Error uploading image:', error.message);
-    }
-  };
+  //   try {
+  //     const { data: { user } } = await supabase.auth.getUser();
+  //     if (!user) throw new Error('No user logged in');
+  
+  //     // 1. Delete old image if exists
+  //     if (profileImage) {
+  //       const oldImagePath = profileImage.split('/storage/v1/object/public/doctor-images/')[1];
+  //       if (oldImagePath) {
+  //         await supabase.storage
+  //           .from('doctor-images')
+  //           .remove([oldImagePath]);
+  //       }
+  //     }
+  
+  //     // 2. Upload new image
+  //     const fileExt = file.name.split('.').pop();
+  //     const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+  //     const filePath = `doctor-images/${fileName}`;
+  
+  //     const { error: uploadError } = await supabase.storage
+  //       .from('doctor-images')
+  //       .upload(filePath, file, {
+  //         cacheControl: '3600',
+  //         upsert: true,
+  //         contentType: file.type
+  //       });
+  
+  //     if (uploadError) throw uploadError;
+  
+  //     // 3. Get public URL
+  //     const { data: { publicUrl } } = supabase.storage
+  //       .from('doctor-images')
+  //       .getPublicUrl(filePath);
+  
+  //     // 4. Update avatar_url in database
+  //     const { error: updateError } = await supabase
+  //       .from('doctors')
+  //       .update({ avatar_url: publicUrl })
+  //       .eq('id', user.id);
+  
+  //     if (updateError) throw updateError;
+  
+  //     // 5. Update UI state
+  //     setProfileImage(publicUrl);
+  //     return publicUrl;
+  
+  //   } catch (error) {
+  //     console.error('Error updating profile image:', error);
+  //     throw error;
+  //   }
+  // };
 
   const handleEditStart = () => {
     setTempFormData({...formData});
@@ -98,6 +135,27 @@ const Profile = () => {
     setTempProfileImage(null);
   };
 
+  const handleImageUpload = async (e) => {
+    try {
+      const file = e.target.files[0];
+      if (!file) return;
+  
+      // Validate file type
+      if (!file.type.match('image.*')) {
+        alert('Please select an image file');
+        return;
+      }
+  
+      // Store the file temporarily
+      const objectUrl = URL.createObjectURL(file);
+      setTempProfileImage(objectUrl);
+  
+    } catch (error) {
+      console.error('Error uploading image:', error.message);
+      alert('Error selecting image. Please try again.');
+    }
+  };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -105,63 +163,75 @@ const Profile = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user logged in');
-
-      let newProfileImage = tempProfileImage;
-
-      // If a new image was selected (but not yet uploaded)
-      if (tempProfileImage && tempProfileImage !== profileImage && tempProfileImage.startsWith('blob:')) {
-        // Upload the new image
+  
+      let newProfileImage = profileImage;
+  
+      // Only process image if a new one was selected
+      if (tempProfileImage && tempProfileImage !== profileImage) {
         const fileInput = document.querySelector('input[type="file"]');
         const file = fileInput?.files?.[0];
         
         if (file) {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${user.id}.${fileExt}`;
-          var filePath = `doctor-images/${fileName}`;
-
-          // Delete old image if exists
-          if (profileImage) {
-            const oldFileName = profileImage.split('/doctor-images/')[1];
-            if (oldFileName) {
-              await supabase.storage.from('doctor-images').remove([oldFileName]);
+          // 1. Delete old image if exists
+          if (profileImage && profileImage.includes('doctor-images')) {
+            try {
+              const oldImagePath = profileImage.split('doctor-images/')[1];
+              if (oldImagePath) {
+                const { error: deleteError } = await supabase.storage
+                  .from('doctor-images')
+                  .remove([oldImagePath]);
+                
+                if (deleteError) console.warn('Error deleting old image:', deleteError);
+              }
+            } catch (deleteError) {
+              console.error('Error deleting old image:', deleteError);
             }
           }
-
-          // Upload new image
+  
+          // 2. Upload new image with unique filename
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+          const filePath = `doctor-images/${fileName}`;
+  
           const { error: uploadError } = await supabase.storage
             .from('doctor-images')
             .upload(filePath, file, {
               cacheControl: '3600',
-              upsert: false,
+              upsert: true,
               contentType: file.type
             });
-
+  
           if (uploadError) throw uploadError;
-
-          const { data: { publicUrl } } = supabase.storage
+  
+          // 3. Get public URL
+          const { data: { publicUrl } } = await supabase.storage
             .from('doctor-images')
             .getPublicUrl(filePath);
-
+  
           newProfileImage = publicUrl;
         }
       }
-
-      // Update the profile data
-      const { error } = await supabase.storage.from('doctor-images').upload(filePath, profileImage, {
-        cacheControl: '3600',
-        upsert: false
-      })
-
-      if (error) throw error;
-
-      // Update the state with the new data
-      setFormData({...tempFormData});
+  
+      // 4. Update profile in database
+      const { error: updateError } = await supabase
+        .from('doctors')
+        .update({ 
+          ...tempFormData,
+          avatar_url: newProfileImage 
+        })
+        .eq('id', user.id);
+  
+      if (updateError) throw updateError;
+  
+      // 5. Update state
+      setFormData(prev => ({ ...prev, ...tempFormData }));
       setProfileImage(newProfileImage);
       setIsEditing(false);
       setTempProfileImage(null);
-
+  
     } catch (error) {
       console.error('Error updating profile:', error.message);
+      alert(`Error updating profile: ${error.message}`);
     } finally {
       setIsLoading(false);
     }

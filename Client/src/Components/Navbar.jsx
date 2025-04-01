@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { data, Link, useNavigate } from 'react-router-dom';
 import { FiMenu, FiX, FiUser, FiLogOut, FiHome, FiActivity, FiUsers, FiInfo } from 'react-icons/fi';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { supabase } from '../helper/supabaseClient';
@@ -11,7 +11,9 @@ const Navbar = () => {
   const [role, setRole] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [activeButton, setActiveButton] = useState(null);
+  const [ProfileImg, setProfileImg] = useState(null);
   const navigate = useNavigate();
+
 
   // Scroll animations
   const { scrollY } = useScroll();
@@ -35,6 +37,7 @@ const Navbar = () => {
     const fetchUserData = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+
         if (session?.user) {
           setUser(session.user);
           const { data } = await supabase
@@ -43,6 +46,16 @@ const Navbar = () => {
             .eq('id', session.user.id)
             .single();
           setRole(data?.role || null);
+        }
+
+        if (session?.user) {
+          const { data } = await supabase
+            .from('doctors')
+            .select('avatar_url')
+            .eq('id', session.user.id)
+            .single();
+
+          setProfileImg(data.avatar_url);
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -83,7 +96,7 @@ const Navbar = () => {
   const isAdmin = role === "HOD" || role === "Trustee";
 
   return (
-    <motion.nav 
+    <motion.nav
       style={{
         backgroundColor,
         boxShadow: shadow,
@@ -95,17 +108,17 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center">
           <Link to="/" className="flex items-center space-x-2 group">
-            <motion.img 
-              src={Logo} 
-              alt="Logo" 
+            <motion.img
+              src={Logo}
+              alt="Logo"
               className="w-10 h-10"
-              whileHover={{ 
+              whileHover={{
                 rotate: [0, 10, -10, 0],
                 transition: { duration: 0.7 }
               }}
               transition={{ type: 'spring', stiffness: 300 }}
             />
-            <motion.span 
+            <motion.span
               className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent"
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
@@ -127,7 +140,7 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             {!user ? (
               <>
-                <motion.div 
+                <motion.div
                   className="hidden md:block relative overflow-hidden rounded-full"
                   initial={false}
                   animate={{
@@ -135,7 +148,7 @@ const Navbar = () => {
                   }}
                   transition={{ duration: 0.5 }}
                 >
-                  <button 
+                  <button
                     onClick={() => handleButtonClick('login')}
                     className="relative z-10 px-4 py-2 text-sm font-medium transition-colors duration-300"
                     style={{
@@ -156,7 +169,7 @@ const Navbar = () => {
                   )}
                 </motion.div>
 
-                <motion.div 
+                <motion.div
                   className="hidden md:block relative overflow-hidden rounded-full"
                   initial={false}
                   animate={{
@@ -164,7 +177,7 @@ const Navbar = () => {
                   }}
                   transition={{ duration: 0.5 }}
                 >
-                  <button 
+                  <button
                     onClick={() => handleButtonClick('signup')}
                     className="relative z-10 px-6 py-2 text-sm font-medium transition-colors duration-300"
                     style={{
@@ -187,20 +200,20 @@ const Navbar = () => {
               </>
             ) : (
               <div className="relative">
-                <motion.button 
-                  onClick={() => setIsProfileOpen(!isProfileOpen)} 
+                <motion.button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center space-x-2 focus:outline-none group"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <div className="relative">
                     <motion.img
-                      src={'https://media.istockphoto.com/id/1337144146/vector/default-avatar-profile-icon-vector.jpg?s=612x612&w=0&k=20&c=BIbFwuv7FxTWvh5S3vB6bkT0Qv8Vn8N5Ffseq84ClGI='}
+                      src={ProfileImg ? ProfileImg : 'https://media.istockphoto.com/id/1337144146/vector/default-avatar-profile-icon-vector.jpg?s=612x612&w=0&k=20&c=BIbFwuv7FxTWvh5S3vB6bkT0Qv8Vn8N5Ffseq84ClGI='}
                       alt="Profile"
                       className="w-9 h-9 rounded-full border-2 border-transparent group-hover:border-blue-400 transition-all duration-300"
                       whileTap={{ scale: 0.9 }}
                     />
-                    <motion.div 
+                    <motion.div
                       className="absolute -bottom-1 -right-1 bg-green-400 rounded-full w-3 h-3 border-2 border-white"
                       animate={{
                         scale: [1, 1.2, 1],
@@ -224,8 +237,8 @@ const Navbar = () => {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ 
-                        type: 'spring', 
+                      transition={{
+                        type: 'spring',
                         damping: 20,
                         stiffness: 300
                       }}
@@ -234,7 +247,7 @@ const Navbar = () => {
                       <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                         <p className="text-sm text-gray-800 font-medium">{user.email}</p>
                         {role && (
-                          <motion.p 
+                          <motion.p
                             className="text-xs text-gray-500 mt-1"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -284,7 +297,7 @@ const Navbar = () => {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ 
+              transition={{
                 duration: 0.3,
                 ease: [0.04, 0.62, 0.23, 0.98]
               }}
@@ -300,7 +313,7 @@ const Navbar = () => {
 
                 {!user ? (
                   <div className="flex flex-col space-y-3 pt-4">
-                    <motion.div 
+                    <motion.div
                       className="relative overflow-hidden rounded-lg"
                       initial={false}
                       animate={{
@@ -329,7 +342,7 @@ const Navbar = () => {
                       )}
                     </motion.div>
 
-                    <motion.div 
+                    <motion.div
                       className="relative overflow-hidden rounded-lg"
                       initial={false}
                       animate={{
@@ -386,14 +399,14 @@ const Navbar = () => {
 
 const NavLink = ({ to, icon, text }) => (
   <Link to={to} className="relative flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-lg transition-colors duration-300 group">
-    <motion.span 
+    <motion.span
       className="mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-300"
       whileHover={{ rotate: 10 }}
     >
       {icon}
     </motion.span>
     {text}
-    <motion.span 
+    <motion.span
       className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-blue-600"
       initial={{ width: 0 }}
       whileHover={{ width: '100%' }}
@@ -403,8 +416,8 @@ const NavLink = ({ to, icon, text }) => (
 );
 
 const MobileNavLink = ({ to, icon, text, onClick }) => (
-  <motion.div 
-    whileHover={{ x: 5 }} 
+  <motion.div
+    whileHover={{ x: 5 }}
     whileTap={{ scale: 0.98 }}
     transition={{ type: 'spring', stiffness: 400 }}
   >
@@ -413,7 +426,7 @@ const MobileNavLink = ({ to, icon, text, onClick }) => (
       className="flex items-center px-4 py-3 text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors duration-300"
       onClick={onClick}
     >
-      <motion.span 
+      <motion.span
         className="mr-3 text-gray-500"
         whileHover={{ scale: 1.1 }}
       >
@@ -425,8 +438,8 @@ const MobileNavLink = ({ to, icon, text, onClick }) => (
 );
 
 const DropdownLink = ({ to, icon, text, onClick }) => (
-  <motion.div 
-    whileHover={{ x: 3 }} 
+  <motion.div
+    whileHover={{ x: 3 }}
     whileTap={{ scale: 0.98 }}
     transition={{ type: 'spring', stiffness: 400 }}
   >
@@ -435,7 +448,7 @@ const DropdownLink = ({ to, icon, text, onClick }) => (
       className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200"
       onClick={onClick}
     >
-      <motion.span 
+      <motion.span
         className="mr-2 text-gray-500"
         whileHover={{ rotate: 10 }}
       >

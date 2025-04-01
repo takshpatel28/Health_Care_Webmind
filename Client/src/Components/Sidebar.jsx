@@ -6,6 +6,7 @@ const Sidebar = () => {
     const navigate = useNavigate();
     const [userRole, setUserRole] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [ProfileImg, setProfileImg] = useState(null);
 
     useEffect(() => {
         const fetchUserRole = async () => {
@@ -18,7 +19,19 @@ const Sidebar = () => {
                     .single();
                 setUserRole(data?.role);
             }
+
+            if (session?.user) {
+                const { data } = await supabase
+                    .from('doctors')
+                    .select('avatar_url')
+                    .eq('id', session.user.id)
+                    .single();
+
+                setProfileImg(data.avatar_url);
+            }
+
             setLoading(false);
+
         };
 
         fetchUserRole();
@@ -120,7 +133,38 @@ const Sidebar = () => {
                         className="mb-4 flex items-center rounded-lg bg-gray-50 p-4 cursor-pointer hover:bg-gray-100"
                         onClick={() => navigate('/profile')}
                     >
-                        <div className="h-10 w-10 rounded-full bg-blue-100"></div>
+                        {/* Profile Image Container */}
+                        <div className="h-10 w-10 rounded-full bg-blue-100 overflow-hidden">
+                            {ProfileImg ? (
+                                <img
+                                    src={ProfileImg}
+                                    alt="Profile"
+                                    className="h-full w-full object-cover"
+                                    onError={(e) => {
+                                        e.target.src = 'https://media.istockphoto.com/id/1337144146/vector/default-avatar-profile-icon-vector.jpg?s=612x612&w=0&k=20&c=BIbFwuv7FxTWvh5S3vB6bkT0Qv8Vn8N5Ffseq84ClGI=';
+                                    }}
+                                />
+                            ) : (
+                                <div className="h-full w-full flex items-center justify-center bg-blue-100">
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-6 w-6 text-blue-500"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                        />
+                                    </svg>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* User Info */}
                         <div className="ml-3">
                             <p className="text-sm font-medium text-gray-800">
                                 {userRole === "HOD" ? "Head of Department" :
@@ -134,6 +178,8 @@ const Sidebar = () => {
                             </p>
                         </div>
                     </div>
+
+                    {/* Logout Button (unchanged) */}
                     <button
                         onClick={handleLogout}
                         className="flex w-full items-center justify-center rounded-lg bg-red-50 px-4 py-3 font-medium text-red-600 transition-all hover:bg-red-100 hover:shadow-sm"
