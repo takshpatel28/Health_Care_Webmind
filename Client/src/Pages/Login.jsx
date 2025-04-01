@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail, Shield, UserCircle, ArrowRight, Key } from "lucide-react";
-import { FcGoogle } from "react-icons/fc";   
+import { FcGoogle } from "react-icons/fc";
 import { supabase } from "../helper/supabaseClient";
 
 const Login = () => {
@@ -60,24 +60,22 @@ const Login = () => {
     }
   };
 
-  const handleGoogleLogin = async (provider) => {
+  const handleGoogleLogin = async () => {
     try {
-      const auth_callback_url = `https://health-care-webmind-1.onrender.com/auth/callback`;
+      setGoogleLoading(true);
       const { error } = await supabase.auth.signInWithOAuth({
-        provider,
+        provider: "google",
         options: {
-          redirectTo: auth_callback_url,
+          redirectTo: `${window.location.origin}/profile-completion`, // Dynamically set the redirect URL
         },
       });
-  
-      if (error) {
-        throw new Error(error.message);
-      }
-    } catch (err) {
-      console.error("OAuth sign-in error:", err.message);
+      if (error) throw error;
+    } catch (error) {
+      setMessage({ text: error?.message || "Google sign-in failed", type: "error" });
+    } finally {
+      setGoogleLoading(false);
     }
   };
-
 
   const handleResetPassword = async () => {
     if (!email) {
@@ -88,13 +86,13 @@ const Login = () => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://health-care-webmind-1.onrender.com/update-password",
+        redirectTo: `${window.location.origin}/update-password`, // Dynamically set the redirect URL
       });
 
       if (error) throw error;
       setMessage({
         text: "Password reset email sent! Check your inbox.",
-        type: "success"
+        type: "success",
       });
     } catch (error) {
       setMessage({ text: error?.message || "An error occurred.", type: "error" });
@@ -105,7 +103,6 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Section - Information */}
@@ -176,15 +173,28 @@ const Login = () => {
             </div>
 
             {message.text && (
-              <div className={`mb-6 p-4 rounded-lg border ${message.type === "error"
-                  ? "bg-red-50 border-red-200 text-red-600"
-                  : "bg-green-50 border-green-200 text-green-600"
-                }`}>
+              <div
+                className={`mb-6 p-4 rounded-lg border ${
+                  message.type === "error"
+                    ? "bg-red-50 border-red-200 text-red-600"
+                    : "bg-green-50 border-green-200 text-green-600"
+                }`}
+              >
                 <p>{message.text}</p>
               </div>
             )}
 
-            <form onSubmit={resetMode ? (e) => { e.preventDefault(); handleResetPassword(); } : handleSubmit} className="space-y-6">
+            <form
+              onSubmit={
+                resetMode
+                  ? (e) => {
+                      e.preventDefault();
+                      handleResetPassword();
+                    }
+                  : handleSubmit
+              }
+              className="space-y-6"
+            >
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                   Email Address
@@ -249,17 +259,32 @@ const Login = () => {
 
               <button
                 type="submit"
-                className={`w-full py-3.5 rounded-lg font-semibold text-white ${loading
+                className={`w-full py-3.5 rounded-lg font-semibold text-white ${
+                  loading
                     ? "bg-blue-400 cursor-not-allowed"
                     : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                  } transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2`}
+                } transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2`}
                 disabled={loading}
               >
                 {loading ? (
                   <>
-                    <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     {resetMode ? "Processing..." : "Signing in..."}
                   </>
@@ -286,9 +311,23 @@ const Login = () => {
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 {googleLoading ? (
-                  <svg className="animate-spin h-5 w-5 text-gray-700" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin h-5 w-5 text-gray-700"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                 ) : (
                   <>
@@ -297,7 +336,6 @@ const Login = () => {
                   </>
                 )}
               </button>
-
             </form>
 
             {resetMode ? (
