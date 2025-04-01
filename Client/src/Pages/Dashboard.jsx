@@ -3,6 +3,11 @@ import { supabase } from "../helper/supabaseClient";
 import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../Components/Sidebar";
 
+// Helper function to safely get initials
+const getInitial = (name) => {
+  return name?.charAt(0)?.toUpperCase() || '?';
+};
+
 const Dashboard = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [allDoctors, setAllDoctors] = useState([]);
@@ -26,7 +31,7 @@ const Dashboard = () => {
         // Get user ID from session
         const userID = sessionData.session.user.id;
         
-        // Fetch all doctors
+        // Fetch all doctors with validation
         const { data: doctorsData, error: doctorsError } = await supabase
           .from("doctors")
           .select("*");
@@ -36,10 +41,18 @@ const Dashboard = () => {
           return;
         }
         
-        setAllDoctors(doctorsData || []);
+        // Validate and set doctors data
+        const validatedDoctors = (doctorsData || []).map(doctor => ({
+          ...doctor,
+          fullname: doctor.fullname || 'Unknown Doctor',
+          department: doctor.department || 'Unassigned',
+          role: doctor.role || 'Doctor'
+        }));
+        
+        setAllDoctors(validatedDoctors);
         
         // Find current user in doctors list
-        const currentUser = doctorsData.find(doctor => doctor.id === userID);
+        const currentUser = validatedDoctors.find(doctor => doctor.id === userID);
         
         if (!currentUser) {
           console.error("User not found in doctors table");
@@ -51,7 +64,7 @@ const Dashboard = () => {
         
         // If user is HOD, filter doctors by their department
         if (currentUser.role === "HOD" && currentUser.department) {
-          const deptDoctors = doctorsData.filter(
+          const deptDoctors = validatedDoctors.filter(
             doctor => doctor.department === currentUser.department
           );
           setDepartmentDoctors(deptDoctors);
@@ -235,7 +248,7 @@ const Dashboard = () => {
                   className="flex items-center rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md"
                 >
                   <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                    {doctor.fullname.charAt(0)}
+                    {getInitial(doctor.fullname)}
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-gray-800">
@@ -274,7 +287,7 @@ const Dashboard = () => {
                 >
                   <div className="mb-4 flex items-center">
                     <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                      {doctor.fullname.charAt(0)}
+                      {getInitial(doctor.fullname)}
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-800">{doctor.fullname}</h3>
@@ -296,7 +309,6 @@ const Dashboard = () => {
                     </Link>
                     <button
                       onClick={() => {
-                        // Implement delete functionality
                         if (window.confirm(`Are you sure you want to delete ${doctor.fullname}?`)) {
                           // Call delete function
                         }
