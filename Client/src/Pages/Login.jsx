@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail, Shield, UserCircle, ArrowRight, Key } from "lucide-react";
-import { supabase } from "../helper/supabaseClient";
 import { FcGoogle } from "react-icons/fc";   
+import { supabase } from "../helper/supabaseClient";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -67,8 +67,8 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://health-care-webmind-1.onrender.com/profile-completion'
-        }
+          redirectTo: `${window.location.origin}/profile-completion`, // Dynamically set the redirect URL
+        },
       });
       if (error) throw error;
     } catch (error) {
@@ -87,7 +87,7 @@ const Login = () => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://health-care-webmind-1.onrender.com/update-password",
+        redirectTo: `${window.location.origin}/update-password`,
       });
 
       if (error) throw error;
