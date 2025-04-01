@@ -14,6 +14,8 @@ import Home from './Pages/Home'
 import Services from './Pages/Service'
 import ProfileCompletion from './Pages/ProfileCompletion'
 import About from './Pages/About'
+import TrusteeDashboard from './Pages/TrusteeDashboard'
+import DoctorChatApp from './Pages/DoctorChatApp'
 
 const App = () => {
   return (
@@ -39,6 +41,8 @@ const App = () => {
         <Route path='/profile' element={<Profile />}/>
       </Routes>
       <Footer />
+      <TrusteeDashboard/>
+      <DoctorChatApp/>
     </BrowserRouter>
   )
 }
