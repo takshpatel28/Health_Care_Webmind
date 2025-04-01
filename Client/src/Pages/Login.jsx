@@ -60,23 +60,24 @@ const Login = () => {
     }
   };
 
-
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async (provider) => {
     try {
-      setGoogleLoading(true);
+      const auth_callback_url = `https://health-care-webmind-1.onrender.com/auth/callback`;
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider,
         options: {
-          redirectTo: 'https://health-care-webmind-1.onrender.com/profile-completion'
-        }
+          redirectTo: auth_callback_url,
+        },
       });
-      if (error) throw error;
-    } catch (error) {
-      setMessage({ text: error?.message || "Google sign-in failed", type: "error" });
-    } finally {
-      setGoogleLoading(false);
+  
+      if (error) {
+        throw new Error(error.message);
+      }
+    } catch (err) {
+      console.error("OAuth sign-in error:", err.message);
     }
   };
+
 
   const handleResetPassword = async () => {
     if (!email) {
@@ -104,7 +105,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Section - Information */}
