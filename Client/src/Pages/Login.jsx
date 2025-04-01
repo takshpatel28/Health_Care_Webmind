@@ -66,7 +66,7 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/profile-completion`, // Dynamically set the redirect URL
+          redirectTo: `${window.location.origin  || 'https://health-care-webmind-1.onrender.com'}/profile-completion`,
         },
       });
       if (error) throw error;
@@ -86,7 +86,7 @@ const Login = () => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`, // Dynamically set the redirect URL
+        redirectTo: `${window.location.origin || 'https://health-care-webmind-1.onrender.com'}/update-password`, // Dynamically set the redirect URL
       });
 
       if (error) throw error;
