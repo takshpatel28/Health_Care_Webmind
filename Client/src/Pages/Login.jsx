@@ -82,13 +82,12 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     try {
       setGoogleLoading(true);
-      const redirectTo = window.location.origin + "/profile-completion";
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo },
+        options: { 
+          redirectTo: "https://health-care-webmind-1.onrender.com/profile-completion",
+         },
       });
-      console.log("Redirecting to:", redirectTo);
       if (error) throw error;
 
     } catch (error) {
