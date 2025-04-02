@@ -33,7 +33,7 @@ const Doctors = () => {
 
       const data = await response.json();
       console.log(data.doctorsData.length);
-      
+
       setDoctors(data.doctorsData || data);
     } catch (error) {
       console.error("Error fetching doctors:", error);
@@ -55,7 +55,7 @@ const Doctors = () => {
 
       // Convert both IDs to strings before comparing
       const matchedData = data.find(e => String(e.id) === String(userID));
-      setrole(matchedData.role)
+      setrole(matchedData.role);
 
     } catch (error) {
       console.error("🚨 Error fetching HODs:", error);
@@ -246,147 +246,70 @@ const Doctors = () => {
                 />
               </svg>
             </div>
-            {/* <button
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center"
-              onClick={() => {
-                setEditingDoctor(null);
-                setFormData({
-                  fullname: "",
-                  specialization: "",
-                  experienceyears: "",
-                  phonenumber: ""
-                });
-                setIsModalOpen(true);
-              }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add Doctor
-            </button> */}
           </div>
         </div>
 
         {filteredDoctors.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
             {filteredDoctors.map((doctor) => (
-              <div
-                key={doctor.id}
-                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 relative"
-              >
-                {/* Improved loading overlay for delete operation */}
-                {operationLoading.delete === doctor.id && (
-                  <div className="absolute inset-0 backdrop-blur-sm bg-gradient-to-br from-blue-100/80 to-indigo-100/80 flex items-center justify-center z-10 rounded-xl">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                  </div>
-                )}
+               <div className="max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 hover:shadow-2xl transition-shadow duration-300 relative">
+               {operationLoading.delete === doctor.id && (
+                 <div className="absolute inset-0 backdrop-blur-md bg-gradient-to-br from-blue-100/80 to-indigo-100/80 flex items-center justify-center z-10 rounded-2xl">
+                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                 </div>
+               )}
+         
+               <div className="relative">
+                 <img
+                   className="w-full h-52 object-cover"
+                   src={doctor.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.fullname)}&background=3B82F6&color=ffffff&size=96`}
+                   alt={doctor.fullname}
+                 />
+                 <div className="absolute bottom-3 right-3 h-6 w-6 bg-green-500 rounded-full border-4 border-white shadow-md"></div>
+               </div>
+         
+               <div className="p-5">
+                 <h3 className="text-xl font-bold text-gray-900">{doctor.fullname}</h3>
+                 <p className="text-blue-500 font-semibold text-sm mb-2">{doctor.specialization}</p>
+                 <div className="flex items-center space-x-2 text-gray-600 text-sm mb-2">
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                   </svg>
+                   <span>{doctor.experienceyears} Years Experience</span>
+                 </div>
+                 <div className="flex items-center space-x-2 text-gray-600 text-sm">
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                   </svg>
+                   <span>{doctor.phonenumber}</span>
+                 </div>
+         
+                 <div className="flex space-x-3 mt-5">
+                   <button
+                     onClick={() => handleEditClick(doctor)}
+                     className="flex-1 bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition-all"
+                   >
+                     Edit
+                   </button>
+                   {role === "Trustee" && (
+                     <button
+                       onClick={() => handleDelete(doctor.id)}
+                       className="flex-1 bg-red-600 text-white font-semibold py-2 rounded-lg hover:bg-red-700 transition-all"
+                     >
+                       Delete
+                     </button>
+                   )}
+                 </div>
+         
+                 <button
+                   onClick={() => handleViewProfile(doctor)}
+                   className="mt-4 w-full border border-blue-600 text-blue-600 font-semibold py-2 rounded-lg hover:bg-blue-600 hover:text-white transition-all"
+                 >
+                   View Profile
+                 </button>
+               </div>
+             </div>
 
-                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-32 flex items-center justify-center">
-                  <div className="bg-white p-2 rounded-full shadow-lg">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-16 w-16 text-blue-600"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-800 mb-1">{doctor.fullname}</h2>
-                      <p className="text-blue-600 font-semibold mb-3">{doctor.specialization}</p>
-                    </div>
-
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleEditClick(doctor)}
-                        className="p-2 text-blue-600 hover:text-blue-800 rounded-full hover:bg-blue-100 transition-colors"
-                        title="Edit"
-                        disabled={operationLoading.edit === doctor.id}
-                      >
-                        {operationLoading.edit === doctor.id ? (
-                          <div className="h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        )}
-                      </button>
-
-                      {role == "Trustee" && (
-                        <button
-                          onClick={() => handleDelete(doctor.id)}
-                          className="p-2 text-red-600 hover:text-red-800 rounded-full hover:bg-red-100 transition-colors"
-                          title="Delete"
-                          disabled={operationLoading.delete === doctor.id}
-                        >
-                          {operationLoading.delete === doctor.id ? (
-                            <div className="h-5 w-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center text-gray-600 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 mr-2 text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    {doctor.experienceyears} Years Experience
-                  </div>
-
-                  <div className="flex items-center text-gray-600 mb-6">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 mr-2 text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                      />
-                    </svg>
-                    {doctor.phonenumber}
-                  </div>
-
-                  <div className="flex space-x-3">
-                    <button
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-300"
-                      onClick={() => handleViewProfile(doctor)}
-                    >
-                      View Profile
-                    </button>
-                  </div>
-                </div>
-              </div>
             ))}
           </div>
         ) : (
@@ -552,20 +475,23 @@ const Doctors = () => {
               <div className="flex flex-col md:flex-row gap-8">
                 <div className="flex-shrink-0">
                   <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-48 w-48 rounded-full flex items-center justify-center mx-auto">
-                    <div className="bg-white p-3 rounded-full shadow-lg">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-24 w-24 text-blue-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    <div className="relative bg-white p-1.2 rounded-full shadow-xl ring-4 ring-blue-50 hover:ring-blue-100 transition-all duration-300 transform hover:scale-105">
+                      {viewingDoctor.avatar_url ? (
+                        <img
+                          src={viewingDoctor.avatar_url}
+                          alt={viewingDoctor.fullname}
+                          className="h-40 w-40 rounded-full object-cover border-4 border-white"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(viewingDoctor.fullname)}&background=3B82F6&color=ffffff&size=96`;
+                          }}
                         />
-                      </svg>
+                      ) : (
+                        <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-3xl">
+                          {viewingDoctor.fullname.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="absolute bottom-1 right-1 h-5 w-5 bg-green-500 rounded-full border-[3px] border-white shadow-sm"></div>
                     </div>
                   </div>
                 </div>
@@ -583,6 +509,11 @@ const Doctors = () => {
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="text-sm font-medium text-gray-500 mb-2">CONTACT</h4>
                       <p className="text-lg font-semibold text-gray-800">{viewingDoctor.phonenumber}</p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="text-sm font-medium text-gray-500 mb-2">CONTACT</h4>
+                      <p className="text-lg font-semibold text-gray-800">{viewingDoctor.email}</p>
                     </div>
 
                     <div className="bg-gray-50 p-4 rounded-lg md:col-span-2">

@@ -2,55 +2,62 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../helper/supabaseClient";
 import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../Components/Sidebar";
+import { Bar, Pie, Doughnut, Line } from "react-chartjs-2";
+import Chart from 'chart.js/auto';
+import { CategoryScale } from 'chart.js';
+
+// Register the category scale
+Chart.register(CategoryScale);
 
 const Dashboard = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [allDoctors, setAllDoctors] = useState([]);
   const [departmentDoctors, setDepartmentDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [DoctorCount, setDoctorsCount] = useState(null);
+  const [doctorCount, setDoctorCount] = useState(null);
+  const [hodCount, setHodCount] = useState(null);
   const navigate = useNavigate();
 
+  // Beautiful color palette
+  const colors = {
+    blue: '#3B82F6',
+    indigo: '#6366F1',
+    purple: '#8B5CF6',
+    pink: '#EC4899',
+    red: '#EF4444',
+    orange: '#F97316',
+    yellow: '#F59E0B',
+    green: '#10B981',
+    teal: '#14B8A6',
+    cyan: '#06B6D4'
+  };
+
   useEffect(() => {
-    const fetchUserAndDoctors = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        // Get session from local storage
+        // Fetch session
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
         if (sessionError || !sessionData?.session) {
-          console.error("Session error:", sessionError);
-          navigate("/login");
-          return;
+          throw new Error("Session error");
         }
-
-        // Get user ID from session
-        const userID = sessionData.session.user.id;
 
         // Fetch all doctors
         const { data: doctorsData, error: doctorsError } = await supabase
           .from("doctors")
           .select("*");
 
-        if (doctorsError) {
-          console.error("Error fetching doctors:", doctorsError);
-          return;
-        }
+        if (doctorsError) throw doctorsError;
 
-        setAllDoctors(doctorsData || []);
-
-        // Find current user in doctors list
+        // Set user info
+        const userID = sessionData.session.user.id;
         const currentUser = doctorsData.find(doctor => doctor.id === userID);
-
-        if (!currentUser) {
-          console.error("User not found in doctors table");
-          navigate("/login");
-          return;
-        }
+        if (!currentUser) throw new Error("User not found");
 
         setUserInfo(currentUser);
+        setHodCount(doctorsData.filter(d => d.role === "HOD").length);
 
-        // If user is HOD, filter doctors by their department
+        // Set department doctors if HOD
         if (currentUser.role === "HOD" && currentUser.department) {
           const deptDoctors = doctorsData.filter(
             doctor => doctor.department === currentUser.department
@@ -59,15 +66,117 @@ const Dashboard = () => {
         }
 
       } catch (error) {
-        console.error("Error in fetchUserAndDoctors:", error);
+        console.error("Error fetching data:", error);
+        navigate("/login");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserAndDoctors();
+    fetchData();
   }, [navigate]);
-  
+
+  // Chart data functions
+  const getDepartmentData = () => {
+    const departments = {};
+    allDoctors.forEach(doctor => {
+      if (doctor.department) {
+        departments[doctor.department] = (departments[doctor.department] || 0) + 1;
+      }
+    });
+
+    const colorKeys = Object.keys(colors);
+    return {
+      labels: Object.keys(departments),
+      datasets: [{
+        label: 'Doctors by Department',
+        data: Object.values(departments),
+        backgroundColor: Object.keys(departments).map((_, i) => colors[colorKeys[i % colorKeys.length]]),
+        borderColor: '#ffffff',
+        borderWidth: 2,
+        borderRadius: 8
+      }]
+    };
+  };
+
+  const getRoleData = () => {
+    const roles = {
+      'HOD': hodCount,
+      'Doctor': allDoctors.filter(d => d.role === 'Doctor').length,
+    };
+
+    return {
+      labels: Object.keys(roles),
+      datasets: [{
+        data: Object.values(roles),
+        backgroundColor: [colors.red, colors.blue, colors.yellow],
+        borderColor: '#ffffff',
+        borderWidth: 2
+      }]
+    };
+  };
+
+  const getDepartmentActivityData = () => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    return {
+      labels: months,
+      datasets: [
+        {
+          label: 'Consultations',
+          data: months.map(() => Math.floor(Math.random() * 20) + 10),
+          backgroundColor: colors.blue + '40',
+          borderColor: colors.blue,
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true
+        },
+        {
+          label: 'Appointments',
+          data: months.map(() => Math.floor(Math.random() * 30) + 15),
+          backgroundColor: colors.green + '40',
+          borderColor: colors.green,
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true
+        }
+      ]
+    };
+  };
+
+  const getDoctorPerformanceData = () => {
+    return {
+      labels: departmentDoctors.map(d => d.fullname),
+      datasets: [{
+        label: 'Performance Score',
+        data: departmentDoctors.map(() => Math.floor(Math.random() * 40) + 60),
+        backgroundColor: departmentDoctors.map((_, i) => {
+          const colorKeys = Object.keys(colors);
+          return colors[colorKeys[i % colorKeys.length]];
+        }),
+        borderColor: '#ffffff',
+        borderWidth: 2,
+        borderRadius: 4
+      }]
+    };
+  };
+
+  useEffect(() => {
+    const fetchHods = async () => {
+      try {
+        const response = await fetch('https://health-care-webmind.onrender.com/api/trusty/gethods');
+
+        const data = await response.json();
+        setHodCount(data.hodsData.length);
+
+      } catch (error) {
+        console.error('Error fetching HODs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHods();
+  }, []);
 
   const fetchDoctors = async () => {
     try {
@@ -75,7 +184,10 @@ const Dashboard = () => {
       if (!response.ok) throw new Error("Failed to fetch doctors");
 
       const data = await response.json();
-      setDoctorsCount(data.doctorsData.length);
+      setDoctorCount(data.doctorsData.length);
+      setAllDoctors(data.doctorsData);
+      // console.log();
+
     } catch (error) {
       console.error("Error fetching doctors:", error);
     } finally {
@@ -89,7 +201,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
           <p className="mt-4 text-lg font-medium text-gray-600">Loading dashboard...</p>
@@ -100,13 +212,13 @@ const Dashboard = () => {
 
   if (!userInfo) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-800">User data not available</h2>
           <p className="mt-2 text-gray-600">Please try logging in again</p>
           <button
             onClick={() => navigate("/login")}
-            className="mt-4 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            className="mt-4 rounded-lg bg-blue-600 px-6 py-2 text-white transition-all hover:bg-blue-700 hover:shadow-md"
           >
             Go to Login
           </button>
@@ -115,13 +227,8 @@ const Dashboard = () => {
     );
   }
 
-  // Calculate counts based on role
-  const doctorsCount = allDoctors.length;
-  const hodsCount = allDoctors.filter(doctor => doctor.role === "HOD").length;
-  const departmentDoctorsCount = departmentDoctors.length;
-
-  // Stats for HOD
-  const hodStats = [
+  // Stats cards configuration
+  const stats = userInfo?.role === "HOD" ? [
     {
       title: "Department",
       value: userInfo?.department || "N/A",
@@ -133,7 +240,7 @@ const Dashboard = () => {
     },
     {
       title: "Department Doctors",
-      value: departmentDoctorsCount,
+      value: departmentDoctors.length,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -150,13 +257,10 @@ const Dashboard = () => {
         </svg>
       )
     }
-  ];
-
-  // Stats for Trustee
-  const trusteeStats = [
+  ] : [
     {
       title: "Total Doctors",
-      value: DoctorCount,
+      value: doctorCount,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -165,7 +269,7 @@ const Dashboard = () => {
     },
     {
       title: "Total HODs",
-      value: hodsCount,
+      value: hodCount,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -184,28 +288,24 @@ const Dashboard = () => {
     }
   ];
 
-  const stats = userInfo?.role === "HOD" ? hodStats : trusteeStats;
-
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       <main className="flex-1 p-6 md:p-8 lg:p-10">
-        {/* Header with welcome message */}
+        {/* Header */}
         <header className="mb-10">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-800 md:text-4xl lg:text-5xl">
                 Welcome back, <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">{userInfo?.fullname}</span>
               </h1>
-              {userInfo?.role === "HOD" ? (
-                <p className="mt-2 text-lg text-gray-500">
-                  Head of <span className="font-medium text-gray-700">{userInfo?.department}</span> Department
-                </p>
-              ) : (
-                <p className="mt-2 text-lg text-gray-500">
-                  System <span className="font-medium text-gray-700">Trustee</span>
-                </p>
-              )}
+              <p className="mt-2 text-lg text-gray-500">
+                {userInfo?.role === "HOD" ? (
+                  <>Head of <span className="font-medium text-gray-700">{userInfo?.department}</span> Department</>
+                ) : (
+                  <>System <span className="font-medium text-gray-700">Trustee</span></>
+                )}
+              </p>
             </div>
             <div className="hidden items-center space-x-2 rounded-full bg-white px-4 py-2 shadow-sm md:flex">
               <div className="h-3 w-3 rounded-full bg-green-400"></div>
@@ -219,7 +319,7 @@ const Dashboard = () => {
           {stats.map((item, index) => (
             <div
               key={index}
-              className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md"
+              className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1"
             >
               <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-blue-50 opacity-0 transition-all duration-500 group-hover:opacity-100"></div>
               <div className="relative z-10 flex items-center justify-between">
@@ -237,7 +337,222 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Recent activity section - Only for HOD */}
+        {/* Charts Section */}
+        <div className="mb-12 grid grid-cols-1 gap-8 lg:grid-cols-2">
+          {userInfo?.role === "Trustee" ? (
+            <>
+              <div className="rounded-xl bg-white p-6 shadow-sm transition-all hover:shadow-md">
+                <h3 className="mb-4 text-lg font-semibold text-gray-800">Doctors by Department</h3>
+                <div className="h-80">
+                  <Bar
+                    data={getDepartmentData()}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'top',
+                          labels: {
+                            font: {
+                              size: 12,
+                              weight: 'bold'
+                            }
+                          }
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                          titleFont: { size: 14, weight: 'bold' },
+                          bodyFont: { size: 12 },
+                          padding: 12,
+                          cornerRadius: 8,
+                          displayColors: true,
+                          callbacks: {
+                            label: (context) => `${context.dataset.label}: ${context.raw}`
+                          }
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                          },
+                          ticks: {
+                            font: {
+                              weight: 'bold'
+                            }
+                          }
+                        },
+                        x: {
+                          grid: {
+                            display: false
+                          },
+                          ticks: {
+                            font: {
+                              weight: 'bold'
+                            }
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-white p-6 shadow-sm transition-all hover:shadow-md">
+                <h3 className="mb-4 text-lg font-semibold text-gray-800">Role Distribution</h3>
+                <div className="h-80">
+                  <Doughnut
+                    data={getRoleData()}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'right',
+                          labels: {
+                            font: {
+                              size: 12,
+                              weight: 'bold'
+                            }
+                          }
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                          titleFont: { size: 14, weight: 'bold' },
+                          bodyFont: { size: 12 },
+                          padding: 12,
+                          cornerRadius: 8,
+                          displayColors: true,
+                          callbacks: {
+                            label: (context) => {
+                              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                              const percentage = Math.round((context.raw / total) * 100);
+                              return `${context.label}: ${context.raw} (${percentage}%)`;
+                            }
+                          }
+                        }
+                      },
+                      cutout: '70%'
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rounded-xl bg-white p-6 shadow-sm transition-all hover:shadow-md">
+                <h3 className="mb-4 text-lg font-semibold text-gray-800">Department Activity</h3>
+                <div className="h-80">
+                  <Line
+                    data={getDepartmentActivityData()}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'top',
+                          labels: {
+                            font: {
+                              size: 12,
+                              weight: 'bold'
+                            }
+                          }
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                          titleFont: { size: 14, weight: 'bold' },
+                          bodyFont: { size: 12 },
+                          padding: 12,
+                          cornerRadius: 8,
+                          displayColors: true
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                          },
+                          ticks: {
+                            font: {
+                              weight: 'bold'
+                            }
+                          }
+                        },
+                        x: {
+                          grid: {
+                            display: false
+                          },
+                          ticks: {
+                            font: {
+                              weight: 'bold'
+                            }
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-white p-6 shadow-sm transition-all hover:shadow-md">
+                <h3 className="mb-4 text-lg font-semibold text-gray-800">Doctor Performance</h3>
+                <div className="h-80">
+                  <Bar
+                    data={getDoctorPerformanceData()}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: false
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                          titleFont: { size: 14, weight: 'bold' },
+                          bodyFont: { size: 12 },
+                          padding: 12,
+                          cornerRadius: 8,
+                          displayColors: true,
+                          callbacks: {
+                            label: (context) => `${context.label}: ${context.raw}% score`
+                          }
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          max: 100,
+                          grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                          },
+                          ticks: {
+                            font: {
+                              weight: 'bold'
+                            }
+                          }
+                        },
+                        x: {
+                          grid: {
+                            display: false
+                          },
+                          ticks: {
+                            font: {
+                              weight: 'bold'
+                            }
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Recent activity section */}
         {userInfo?.role === "HOD" && (
           <section className="mb-12">
             <div className="mb-6 flex items-center justify-between">
@@ -252,9 +567,9 @@ const Dashboard = () => {
               {departmentDoctors.slice(0, 3).map((doctor) => (
                 <div
                   key={doctor.id}
-                  className="flex items-center rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md"
+                  className="flex items-center rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1"
                 >
-                  <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                  <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold">
                     {doctor.fullname.charAt(0)}
                   </div>
                   <div className="flex-1">
@@ -265,7 +580,7 @@ const Dashboard = () => {
                   </div>
                   <Link
                     to={`/doctor-profile/${doctor.id}`}
-                    className="rounded bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
+                    className="rounded-lg bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 transition-all hover:bg-blue-100 hover:shadow-sm"
                   >
                     View Profile
                   </Link>
@@ -275,7 +590,7 @@ const Dashboard = () => {
           </section>
         )}
 
-        {/* Trustee-specific content - Doctor Management */}
+        {/* Trustee-specific content */}
         {userInfo?.role === "Trustee" && (
           <section className="mb-12">
             <div className="mb-6 flex items-center justify-between">
@@ -290,10 +605,10 @@ const Dashboard = () => {
               {allDoctors.slice(0, 3).map((doctor) => (
                 <div
                   key={doctor.id}
-                  className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md"
+                  className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1"
                 >
                   <div className="mb-4 flex items-center">
-                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold">
                       {doctor.fullname.charAt(0)}
                     </div>
                     <div>
@@ -303,18 +618,18 @@ const Dashboard = () => {
                   </div>
                   <div className="flex space-x-2">
                     <Link
-                      className="flex-1 rounded bg-blue-50 px-3 py-1 text-center text-sm font-medium text-blue-600 hover:bg-blue-100"
+                      to={`/doctor-profile/${doctor.id}`}
+                      className="flex-1 rounded-lg bg-blue-50 px-3 py-1 text-center text-sm font-medium text-blue-600 transition-all hover:bg-blue-100 hover:shadow-sm"
                     >
                       Profile
                     </Link>
                     <button
                       onClick={() => {
-                        // Implement delete functionality
                         if (window.confirm(`Are you sure you want to delete ${doctor.fullname}?`)) {
                           // Call delete function
                         }
                       }}
-                      className="flex-1 rounded bg-red-50 px-3 py-1 text-center text-sm font-medium text-red-600 hover:bg-red-100"
+                      className="flex-1 rounded-lg bg-red-50 px-3 py-1 text-center text-sm font-medium text-red-600 transition-all hover:bg-red-100 hover:shadow-sm"
                     >
                       Delete
                     </button>
@@ -325,62 +640,59 @@ const Dashboard = () => {
           </section>
         )}
 
-        {/* Department overview - Only for HOD */}
-        {userInfo?.role === "HOD" && (
-          <section className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 p-8 text-center text-white shadow-lg">
-            <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-white bg-opacity-10"></div>
-            <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-white bg-opacity-10"></div>
-            <div className="relative z-10">
-              <h2 className="mb-2 text-2xl font-semibold">
-                Department Overview
-              </h2>
-              <p className="mb-6 text-blue-100">DEPARTMENT STAFF</p>
-              <p className="my-4 text-6xl font-bold">{departmentDoctorsCount}</p>
-              <p className="mb-8 text-xl font-medium text-blue-100">Doctors in your department</p>
-              <Link to="/doctors">
-                <button className="rounded-lg bg-white px-8 py-3 font-semibold text-blue-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
-                  View Department Doctors →
-                </button>
-              </Link>
-            </div>
-          </section>
-        )}
+        {/* Overview section */}
+        <section className={`relative overflow-hidden rounded-xl p-8 text-center text-white shadow-lg ${userInfo?.role === "HOD"
+          ? "bg-gradient-to-r from-blue-600 to-cyan-500"
+          : "bg-gradient-to-r from-indigo-600 to-purple-500"
+          }`}>
+          <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-white bg-opacity-10"></div>
+          <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-white bg-opacity-10"></div>
+          <div className="relative z-10">
+            <h2 className="mb-2 text-2xl font-semibold">
+              {userInfo?.role === "HOD" ? "Department Overview" : "System Overview"}
+            </h2>
+            <p className="mb-6 text-blue-100">
+              {userInfo?.role === "HOD" ? "DEPARTMENT STAFF" : "TOTAL STAFF"}
+            </p>
 
-        {/* Trustee-specific overview */}
-        {userInfo?.role === "Trustee" && (
-          <section className="relative overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-purple-500 p-8 text-center text-white shadow-lg">
-            <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-white bg-opacity-10"></div>
-            <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-white bg-opacity-10"></div>
-            <div className="relative z-10">
-              <h2 className="mb-2 text-2xl font-semibold">
-                System Overview
-              </h2>
-              <p className="mb-6 text-indigo-100">TOTAL STAFF</p>
-              <div className="flex justify-center space-x-12 my-4">
-                <div>
-                  <p className="text-6xl font-bold">{doctorsCount}</p>
-                  <p className="text-xl font-medium text-indigo-100">Doctors</p>
-                </div>
-                <div>
-                  <p className="text-6xl font-bold">{hodsCount}</p>
-                  <p className="text-xl font-medium text-indigo-100">HODs</p>
-                </div>
-              </div>
-              <div className="flex justify-center space-x-4">
+            {userInfo?.role === "HOD" ? (
+              <>
+                <p className="my-4 text-6xl font-bold">{departmentDoctors.length}</p>
+                <p className="mb-8 text-xl font-medium text-blue-100">Doctors in your department</p>
                 <Link to="/doctors">
-                  <button className="rounded-lg bg-white px-8 py-3 font-semibold text-indigo-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
-                    View All Staff →
+                  <button className="rounded-lg bg-white px-8 py-3 font-semibold text-blue-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
+                    View Department Doctors →
                   </button>
                 </Link>
-                <Link to="/add-doctor">
-                  <button className="rounded-lg bg-indigo-700 px-8 py-3 font-semibold text-white shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
-                    Add New Doctor →
-                  </button>
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
+              </>
+            ) : (
+              <>
+                <div className="flex justify-center space-x-12 my-4">
+                  <div>
+                    <p className="text-6xl font-bold">{doctorCount}</p>
+                    <p className="text-xl font-medium text-indigo-100">Doctors</p>
+                  </div>
+                  <div>
+                    <p className="text-6xl font-bold">{hodCount}</p>
+                    <p className="text-xl font-medium text-indigo-100">HODs</p>
+                  </div>
+                </div>
+                <div className="flex justify-center space-x-4">
+                  <Link to="/doctors">
+                    <button className="rounded-lg bg-white px-8 py-3 font-semibold text-indigo-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
+                      View All Doctors →
+                    </button>
+                  </Link>
+                  <Link to="/hods">
+                    <button className="rounded-lg bg-indigo-700 px-8 py-3 font-semibold text-white shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
+                      View All HOD's →
+                    </button>
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
       </main>
     </div>
   );

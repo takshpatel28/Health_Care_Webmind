@@ -16,6 +16,7 @@
     "@tailwindcss/vite": "^4.0.16",
     "apexcharts": "^4.5.0",
     "axios": "^1.8.4",
+    "chart.js": "^4.4.8",
     "dotenv": "^16.4.7",
     "framer-motion": "^12.6.2",
     "lucide-react": "^0.484.0",
