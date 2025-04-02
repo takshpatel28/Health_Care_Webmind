@@ -15,7 +15,6 @@ import Services from './Pages/Service'
 import ProfileCompletion from './Pages/ProfileCompletion'
 import About from './Pages/About'
 import TrusteeDashboard from './Pages/TrusteeDashboard'
-import DoctorChatApp from './Pages/DoctorChatApp'
 
 const App = () => {
   return (
@@ -39,10 +38,9 @@ const App = () => {
         <Route path='/services' element={<Services />}/>
         <Route path='/profile-completion' element={<ProfileCompletion />}/>
         <Route path='/profile' element={<Profile />}/>
+        <Route path='/trustee-dashboard' element={<TrusteeDashboard />}/>
       </Routes>
       <Footer />
-      <TrusteeDashboard/>
-      <DoctorChatApp/>
     </BrowserRouter>
   )
 }

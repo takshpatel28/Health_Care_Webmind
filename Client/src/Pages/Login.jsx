@@ -1,6 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Lock, Mail, Shield, UserCircle, ArrowRight, Key } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Shield,
+  UserCircle,
+  ArrowRight,
+  Key,
+} from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { supabase } from "../helper/supabaseClient";
 
@@ -19,7 +28,10 @@ const Login = () => {
     setMessage({ text: "", type: "" });
 
     if (!email || !password) {
-      setMessage({ text: "Please enter both email and password.", type: "error" });
+      setMessage({
+        text: "Please enter both email and password.",
+        type: "error",
+      });
       return;
     }
 
@@ -32,7 +44,8 @@ const Login = () => {
       });
 
       if (error) throw error;
-      if (!data || !data.user) throw new Error("Login failed. Please try again.");
+      if (!data || !data.user)
+        throw new Error("Login failed. Please try again.");
 
       const userID = data.user.id;
 
@@ -50,10 +63,16 @@ const Login = () => {
       } else if (doctor.role === "Doctor") {
         navigate("/profile");
       } else {
-        setMessage({ text: "Access Denied: Unauthorized role.", type: "error" });
+        setMessage({
+          text: "Access Denied: Unauthorized role.",
+          type: "error",
+        });
       }
     } catch (error) {
-      setMessage({ text: error?.message || "An error occurred.", type: "error" });
+      setMessage({
+        text: error?.message || "An error occurred.",
+        type: "error",
+      });
       setPassword("");
     } finally {
       setLoading(false);
@@ -63,15 +82,20 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     try {
       setGoogleLoading(true);
+      const redirectTo = window.location.origin + "/profile-completion";
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `https://health-care-webmind-1.onrender.com/profile-completion`,
-        },
+        options: { redirectTo },
       });
+      console.log("Redirecting to:", redirectTo);
       if (error) throw error;
+
     } catch (error) {
-      setMessage({ text: error?.message || "Google sign-in failed", type: "error" });
+      setMessage({
+        text: error?.message || "Google sign-in failed",
+        type: "error",
+      });
     } finally {
       setGoogleLoading(false);
     }
@@ -79,7 +103,10 @@ const Login = () => {
 
   const handleResetPassword = async () => {
     if (!email) {
-      setMessage({ text: "Please enter your email to reset the password.", type: "error" });
+      setMessage({
+        text: "Please enter your email to reset the password.",
+        type: "error",
+      });
       return;
     }
 
@@ -95,7 +122,10 @@ const Login = () => {
         type: "success",
       });
     } catch (error) {
-      setMessage({ text: error?.message || "An error occurred.", type: "error" });
+      setMessage({
+        text: error?.message || "An error occurred.",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -112,7 +142,8 @@ const Login = () => {
                 Welcome Back
               </h1>
               <p className="text-lg md:text-xl text-gray-600">
-                Sign in to access your role-specific dashboard and manage healthcare responsibilities.
+                Sign in to access your role-specific dashboard and manage
+                healthcare responsibilities.
               </p>
             </div>
 
@@ -123,7 +154,9 @@ const Login = () => {
                     <UserCircle className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Secure Authentication</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Secure Authentication
+                    </h3>
                     <p className="text-gray-600">
                       Your data is protected with industry-standard encryption.
                     </p>
@@ -137,9 +170,12 @@ const Login = () => {
                     <Lock className="w-6 h-6 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Role-Based Access</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Role-Based Access
+                    </h3>
                     <p className="text-gray-600">
-                      Access dashboards tailored to your role in the organization.
+                      Access dashboards tailored to your role in the
+                      organization.
                     </p>
                   </div>
                 </div>
@@ -151,7 +187,9 @@ const Login = () => {
                     <Shield className="w-6 h-6 text-green-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">HIPAA Compliant</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      HIPAA Compliant
+                    </h3>
                     <p className="text-gray-600">
                       Designed to meet healthcare compliance standards.
                     </p>
@@ -196,7 +234,10 @@ const Login = () => {
               className="space-y-6"
             >
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Email Address
                 </label>
                 <div className="relative">
@@ -217,7 +258,10 @@ const Login = () => {
 
               {!resetMode && (
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Password
                   </label>
                   <div className="relative">
@@ -300,7 +344,9 @@ const Login = () => {
                   <div className="w-full border-t border-gray-300"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                  <span className="px-2 bg-white text-gray-500">
+                    Or continue with
+                  </span>
                 </div>
               </div>
 
@@ -349,7 +395,10 @@ const Login = () => {
             ) : (
               <p className="mt-6 text-center text-sm text-gray-600">
                 Don't have an account?{" "}
-                <a href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+                <a
+                  href="/signup"
+                  className="font-medium text-blue-600 hover:text-blue-500"
+                >
                   Create one now
                 </a>
               </p>
