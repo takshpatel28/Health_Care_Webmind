@@ -23,7 +23,7 @@ function Doctorchat() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8080/api/chat', {
+      const response = await axios.post('https://health-care-webmind.onrender.com/api/chat', {
         messages: [
           {
             role: 'system',
