@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../helper/supabaseClient";
 import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../Components/Sidebar";
-import { Bar, Pie, Doughnut, Line } from "react-chartjs-2";
+import { Bar, Doughnut, Line } from "react-chartjs-2";
 import Chart from 'chart.js/auto';
 import { CategoryScale } from 'chart.js';
 
@@ -16,6 +16,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [doctorCount, setDoctorCount] = useState(null);
   const [hodCount, setHodCount] = useState(null);
+  const [operationLoading, setOperationLoading] = useState({ delete: null });
   const navigate = useNavigate();
 
   // Beautiful color palette
@@ -75,6 +76,36 @@ const Dashboard = () => {
 
     fetchData();
   }, [navigate]);
+
+  const handleDelete = async (doctorId) => {
+    if (window.confirm("Are you sure you want to delete this doctor?")) {
+      try {
+        setOperationLoading({ ...operationLoading, delete: doctorId });
+        
+        // Delete from Supabase
+        const { error } = await supabase
+          .from('doctors')
+          .delete()
+          .eq('id', doctorId);
+
+        if (error) throw error;
+
+        // Refresh the doctors list
+        await fetchDoctors();
+        
+        // If this was the current user, log them out
+        if (doctorId === userInfo?.id) {
+          await supabase.auth.signOut();
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error("Error deleting doctor:", error);
+        alert("Failed to delete doctor");
+      } finally {
+        setOperationLoading({ ...operationLoading, delete: null });
+      }
+    }
+  };
 
   // Chart data functions
   const getDepartmentData = () => {
@@ -164,10 +195,8 @@ const Dashboard = () => {
     const fetchHods = async () => {
       try {
         const response = await fetch('https://health-care-webmind.onrender.com/api/trusty/gethods');
-
         const data = await response.json();
         setHodCount(data.hodsData.length);
-
       } catch (error) {
         console.error('Error fetching HODs:', error);
       } finally {
@@ -186,8 +215,6 @@ const Dashboard = () => {
       const data = await response.json();
       setDoctorCount(data.doctorsData.length);
       setAllDoctors(data.doctorsData);
-      // console.log();
-
     } catch (error) {
       console.error("Error fetching doctors:", error);
     } finally {
@@ -233,7 +260,7 @@ const Dashboard = () => {
       title: "Department",
       value: userInfo?.department || "N/A",
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
       )
@@ -242,7 +269,7 @@ const Dashboard = () => {
       title: "Department Doctors",
       value: departmentDoctors.length,
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       )
@@ -251,7 +278,7 @@ const Dashboard = () => {
       title: "Role",
       value: userInfo?.role || "N/A",
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
@@ -262,7 +289,7 @@ const Dashboard = () => {
       title: "Total Doctors",
       value: doctorCount,
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       )
@@ -271,7 +298,7 @@ const Dashboard = () => {
       title: "Total HODs",
       value: hodCount,
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )
@@ -280,7 +307,7 @@ const Dashboard = () => {
       title: "Role",
       value: userInfo?.role || "N/A",
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
@@ -291,15 +318,17 @@ const Dashboard = () => {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <main className="flex-1 p-6 md:p-8 lg:p-10">
-        {/* Header */}
-        <header className="mb-10">
-          <div className="flex items-center justify-between">
+
+      {/* Main Content */}
+      <main className="flex-1 p-4 sm:p-6 md:p-8 lg:p-10 mt-8">
+        {/* Header - Stacked on mobile, row on larger screens */}
+        <header className="mb-6 sm:mb-8 md:mb-10">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 md:text-4xl lg:text-5xl">
+              <h1 className="text-2xl font-bold text-gray-800 sm:text-3xl md:text-4xl lg:text-5xl">
                 Welcome back, <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">{userInfo?.fullname}</span>
               </h1>
-              <p className="mt-2 text-lg text-gray-500">
+              <p className="mt-1 text-base text-gray-500 sm:mt-2 sm:text-lg">
                 {userInfo?.role === "HOD" ? (
                   <>Head of <span className="font-medium text-gray-700">{userInfo?.department}</span> Department</>
                 ) : (
@@ -307,101 +336,105 @@ const Dashboard = () => {
                 )}
               </p>
             </div>
-            <div className="hidden items-center space-x-2 rounded-full bg-white px-4 py-2 shadow-sm md:flex">
-              <div className="h-3 w-3 rounded-full bg-green-400"></div>
-              <span className="text-sm font-medium text-gray-600">Active</span>
+            <div className="flex items-center justify-end space-x-2 rounded-full bg-white px-3 py-3 shadow-sm sm:px-4 sm:py-2">
+              <div className="h-2 w-2 rounded-full bg-green-400 sm:h-3 sm:w-3"></div>
+              <span className="text-xs font-medium text-gray-600 sm:text-sm">Active</span>
             </div>
           </div>
         </header>
 
-        {/* Stats cards */}
-        <div className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
+        {/* Stats cards - 1 column on mobile, 3 on desktop */}
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
           {stats.map((item, index) => (
             <div
               key={index}
-              className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+              className="group relative overflow-hidden rounded-xl bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 sm:p-6"
             >
-              <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-blue-50 opacity-0 transition-all duration-500 group-hover:opacity-100"></div>
+              <div className="absolute -right-4 -top-4 h-12 w-12 rounded-full bg-blue-50 opacity-0 transition-all duration-500 group-hover:opacity-100 sm:-right-6 sm:-top-6 sm:h-16 sm:w-16"></div>
               <div className="relative z-10 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium uppercase tracking-wider text-gray-500">
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500 sm:text-sm">
                     {item.title}
                   </p>
-                  <h2 className="mt-2 text-2xl font-bold text-gray-800">{item.value}</h2>
+                  <h2 className="mt-1 text-xl font-bold text-gray-800 sm:mt-2 sm:text-2xl">{item.value}</h2>
                 </div>
-                <div className="rounded-lg bg-blue-50 p-3">
-                  {item.icon}
+                <div className="rounded-lg bg-blue-50 p-2 sm:p-3">
+                  {React.cloneElement(item.icon, { className: 'h-5 w-5 sm:h-6 sm:w-6' })}
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Charts Section */}
-        <div className="mb-12 grid grid-cols-1 gap-8 lg:grid-cols-2">
+        {/* Charts Section - 1 column on mobile, 2 on desktop */}
+        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
           {userInfo?.role === "Trustee" ? (
             <>
-              <div className="rounded-xl bg-white p-6 shadow-sm transition-all hover:shadow-md">
-                <h3 className="mb-4 text-lg font-semibold text-gray-800">Doctors by Department</h3>
-                <div className="h-80">
-                  <Bar
-                    data={getDepartmentData()}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          position: 'top',
-                          labels: {
-                            font: {
-                              size: 12,
-                              weight: 'bold'
+              <div className="rounded-xl bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6">
+                <h3 className="mb-3 text-lg font-semibold text-gray-800 sm:mb-4">Doctors by Department</h3>
+                <div className="relative h-64 sm:h-80">
+                  <div className="absolute inset-0 overflow-x-auto">
+                    <div className="min-w-[500px] h-full"> {/* Adjust min-width as needed */}
+                      <Bar
+                        data={getDepartmentData()}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: window.innerWidth < 640 ? 'bottom' : 'top',
+                              labels: {
+                                font: {
+                                  size: window.innerWidth < 640 ? 10 : 12,
+                                  weight: 'bold'
+                                }
+                              }
+                            },
+                            tooltip: {
+                              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                              titleFont: { size: 14, weight: 'bold' },
+                              bodyFont: { size: 12 },
+                              padding: 12,
+                              cornerRadius: 8,
+                              displayColors: true,
+                              callbacks: {
+                                label: (context) => `${context.dataset.label}: ${context.raw}`
+                              }
                             }
-                          }
-                        },
-                        tooltip: {
-                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                          titleFont: { size: 14, weight: 'bold' },
-                          bodyFont: { size: 12 },
-                          padding: 12,
-                          cornerRadius: 8,
-                          displayColors: true,
-                          callbacks: {
-                            label: (context) => `${context.dataset.label}: ${context.raw}`
-                          }
-                        }
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
                           },
-                          ticks: {
-                            font: {
-                              weight: 'bold'
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                              },
+                              ticks: {
+                                font: {
+                                  weight: 'bold'
+                                }
+                              }
+                            },
+                            x: {
+                              grid: {
+                                display: false
+                              },
+                              ticks: {
+                                font: {
+                                  weight: 'bold'
+                                }
+                              }
                             }
                           }
-                        },
-                        x: {
-                          grid: {
-                            display: false
-                          },
-                          ticks: {
-                            font: {
-                              weight: 'bold'
-                            }
-                          }
-                        }
-                      }
-                    }}
-                  />
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-white p-6 shadow-sm transition-all hover:shadow-md">
-                <h3 className="mb-4 text-lg font-semibold text-gray-800">Role Distribution</h3>
-                <div className="h-80">
+              <div className="rounded-xl bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6">
+                <h3 className="mb-3 text-lg font-semibold text-gray-800 sm:mb-4">Role Distribution</h3>
+                <div className="h-64 sm:h-80">
                   <Doughnut
                     data={getRoleData()}
                     options={{
@@ -409,10 +442,10 @@ const Dashboard = () => {
                       maintainAspectRatio: false,
                       plugins: {
                         legend: {
-                          position: 'right',
+                          position: window.innerWidth < 640 ? 'bottom' : 'right',
                           labels: {
                             font: {
-                              size: 12,
+                              size: window.innerWidth < 640 ? 10 : 12,
                               weight: 'bold'
                             }
                           }
@@ -441,9 +474,9 @@ const Dashboard = () => {
             </>
           ) : (
             <>
-              <div className="rounded-xl bg-white p-6 shadow-sm transition-all hover:shadow-md">
-                <h3 className="mb-4 text-lg font-semibold text-gray-800">Department Activity</h3>
-                <div className="h-80">
+              <div className="rounded-xl bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6">
+                <h3 className="mb-3 text-lg font-semibold text-gray-800 sm:mb-4">Department Activity</h3>
+                <div className="h-64 sm:h-80">
                   <Line
                     data={getDepartmentActivityData()}
                     options={{
@@ -451,10 +484,10 @@ const Dashboard = () => {
                       maintainAspectRatio: false,
                       plugins: {
                         legend: {
-                          position: 'top',
+                          position: window.innerWidth < 640 ? 'bottom' : 'top',
                           labels: {
                             font: {
-                              size: 12,
+                              size: window.innerWidth < 640 ? 10 : 12,
                               weight: 'bold'
                             }
                           }
@@ -496,9 +529,9 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl bg-white p-6 shadow-sm transition-all hover:shadow-md">
-                <h3 className="mb-4 text-lg font-semibold text-gray-800">Doctor Performance</h3>
-                <div className="h-80">
+              <div className="rounded-xl bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6">
+                <h3 className="mb-3 text-lg font-semibold text-gray-800 sm:mb-4">Doctor Performance</h3>
+                <div className="h-64 sm:h-80">
                   <Bar
                     data={getDoctorPerformanceData()}
                     options={{
@@ -552,35 +585,35 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* Recent activity section */}
+        {/* Recent activity section - responsive padding and spacing */}
         {userInfo?.role === "HOD" && (
-          <section className="mb-12">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-800">
+          <section className="mb-8 sm:mb-10 md:mb-12">
+            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-semibold text-gray-800 sm:text-2xl">
                 Department Doctors
               </h2>
               <Link to="/doctors" className="text-sm font-medium text-blue-600 hover:text-blue-700">
                 View All
               </Link>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {departmentDoctors.slice(0, 3).map((doctor) => (
                 <div
                   key={doctor.id}
-                  className="flex items-center rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                  className="flex flex-col items-center gap-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 sm:flex-row sm:p-5"
                 >
-                  <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold sm:h-12 sm:w-12">
                     {doctor.fullname.charAt(0)}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-800">
+                  <div className="flex-1 text-center sm:text-left">
+                    <h3 className="text-base font-bold text-gray-800 sm:text-lg">
                       {doctor.fullname}
                     </h3>
-                    <p className="text-gray-600">{doctor.specialization || "General Physician"}</p>
+                    <p className="text-sm text-gray-600 sm:text-base">{doctor.specialization || "General Physician"}</p>
                   </div>
                   <Link
                     to={`/doctor-profile/${doctor.id}`}
-                    className="rounded-lg bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 transition-all hover:bg-blue-100 hover:shadow-sm"
+                    className="w-full rounded-lg bg-blue-50 px-3 py-2 text-center text-sm font-medium text-blue-600 transition-all hover:bg-blue-100 hover:shadow-sm sm:w-auto sm:px-4"
                   >
                     View Profile
                   </Link>
@@ -590,48 +623,53 @@ const Dashboard = () => {
           </section>
         )}
 
-        {/* Trustee-specific content */}
+        {/* Trustee-specific content - responsive grid */}
         {userInfo?.role === "Trustee" && (
-          <section className="mb-12">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-800">
+          <section className="mb-8 sm:mb-10 md:mb-12">
+            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-semibold text-gray-800 sm:text-2xl">
                 Doctor Management
               </h2>
               <Link to="/doctors" className="text-sm font-medium text-blue-600 hover:text-blue-700">
                 View All Doctors
               </Link>
             </div>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
               {allDoctors.slice(0, 3).map((doctor) => (
                 <div
                   key={doctor.id}
-                  className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                  className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 sm:p-5"
                 >
-                  <div className="mb-4 flex items-center">
-                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold">
+                  <div className="mb-3 flex items-center sm:mb-4">
+                    <div className="mr-2 flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold sm:h-10 sm:w-10 sm:mr-3">
                       {doctor.fullname.charAt(0)}
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-800">{doctor.fullname}</h3>
-                      <p className="text-sm text-gray-500">{doctor.role} - {doctor.department}</p>
+                      <h3 className="text-sm font-bold text-gray-800 sm:text-base">{doctor.fullname}</h3>
+                      <p className="text-xs text-gray-500 sm:text-sm">{doctor.role} - {doctor.department}</p>
                     </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <Link
-                      to={`/doctor-profile/${doctor.id}`}
-                      className="flex-1 rounded-lg bg-blue-50 px-3 py-1 text-center text-sm font-medium text-blue-600 transition-all hover:bg-blue-100 hover:shadow-sm"
-                    >
-                      Profile
-                    </Link>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:space-x-2">
                     <button
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to delete ${doctor.fullname}?`)) {
-                          // Call delete function
-                        }
-                      }}
-                      className="flex-1 rounded-lg bg-red-50 px-3 py-1 text-center text-sm font-medium text-red-600 transition-all hover:bg-red-100 hover:shadow-sm"
+                      onClick={() => handleDelete(doctor.id)}
+                      disabled={operationLoading.delete === doctor.id}
+                      className={`rounded-lg px-3 py-1 text-center text-xs font-medium transition-all hover:shadow-sm sm:text-sm ${
+                        operationLoading.delete === doctor.id
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-red-50 text-red-600 hover:bg-red-100'
+                      }`}
                     >
-                      Delete
+                      {operationLoading.delete === doctor.id ? (
+                        <span className="flex items-center justify-center">
+                          <svg className="mr-1 h-3 w-3 animate-spin" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Deleting...
+                        </span>
+                      ) : (
+                        'Delete'
+                      )}
                     </button>
                   </div>
                 </div>
@@ -640,51 +678,51 @@ const Dashboard = () => {
           </section>
         )}
 
-        {/* Overview section */}
-        <section className={`relative overflow-hidden rounded-xl p-8 text-center text-white shadow-lg ${userInfo?.role === "HOD"
-          ? "bg-gradient-to-r from-blue-600 to-cyan-500"
-          : "bg-gradient-to-r from-indigo-600 to-purple-500"
+        {/* Overview section - responsive padding and button layout */}
+        <section className={`relative overflow-hidden rounded-xl p-6 text-center text-white shadow-lg sm:p-8 ${userInfo?.role === "HOD"
+            ? "bg-gradient-to-r from-blue-600 to-cyan-500"
+            : "bg-gradient-to-r from-indigo-600 to-purple-500"
           }`}>
-          <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-white bg-opacity-10"></div>
-          <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-white bg-opacity-10"></div>
+          <div className="absolute -right-10 -top-10 h-20 w-20 rounded-full bg-white bg-opacity-10 sm:-right-20 sm:-top-20 sm:h-40 sm:w-40"></div>
+          <div className="absolute -bottom-10 -left-10 h-20 w-20 rounded-full bg-white bg-opacity-10 sm:-bottom-20 sm:-left-20 sm:h-40 sm:w-40"></div>
           <div className="relative z-10">
-            <h2 className="mb-2 text-2xl font-semibold">
+            <h2 className="mb-2 text-xl font-semibold sm:text-2xl">
               {userInfo?.role === "HOD" ? "Department Overview" : "System Overview"}
             </h2>
-            <p className="mb-6 text-blue-100">
+            <p className="mb-4 text-blue-100 sm:mb-6">
               {userInfo?.role === "HOD" ? "DEPARTMENT STAFF" : "TOTAL STAFF"}
             </p>
 
             {userInfo?.role === "HOD" ? (
               <>
-                <p className="my-4 text-6xl font-bold">{departmentDoctors.length}</p>
-                <p className="mb-8 text-xl font-medium text-blue-100">Doctors in your department</p>
+                <p className="my-3 text-4xl font-bold sm:my-4 sm:text-6xl">{departmentDoctors.length}</p>
+                <p className="mb-6 text-base font-medium text-blue-100 sm:mb-8 sm:text-xl">Doctors in your department</p>
                 <Link to="/doctors">
-                  <button className="rounded-lg bg-white px-8 py-3 font-semibold text-blue-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
+                  <button className="rounded-lg bg-white px-6 py-2 text-sm font-semibold text-blue-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg sm:px-8 sm:py-3 sm:text-base">
                     View Department Doctors →
                   </button>
                 </Link>
               </>
             ) : (
               <>
-                <div className="flex justify-center space-x-12 my-4">
+                <div className="flex flex-col items-center justify-center gap-6 my-3 sm:flex-row sm:my-4 sm:space-x-12">
                   <div>
-                    <p className="text-6xl font-bold">{doctorCount}</p>
-                    <p className="text-xl font-medium text-indigo-100">Doctors</p>
+                    <p className="text-4xl font-bold sm:text-6xl">{doctorCount}</p>
+                    <p className="text-base font-medium text-indigo-100 sm:text-xl">Doctors</p>
                   </div>
                   <div>
-                    <p className="text-6xl font-bold">{hodCount}</p>
-                    <p className="text-xl font-medium text-indigo-100">HODs</p>
+                    <p className="text-4xl font-bold sm:text-6xl">{hodCount}</p>
+                    <p className="text-base font-medium text-indigo-100 sm:text-xl">HODs</p>
                   </div>
                 </div>
-                <div className="flex justify-center space-x-4">
+                <div className="flex flex-col gap-3 justify-center sm:flex-row sm:space-x-4">
                   <Link to="/doctors">
-                    <button className="rounded-lg bg-white px-8 py-3 font-semibold text-indigo-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
+                    <button className="w-full rounded-lg bg-white px-6 py-2 text-sm font-semibold text-indigo-600 shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg sm:w-auto sm:px-8 sm:py-3 sm:text-base">
                       View All Doctors →
                     </button>
                   </Link>
                   <Link to="/hods">
-                    <button className="rounded-lg bg-indigo-700 px-8 py-3 font-semibold text-white shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg">
+                    <button className="w-full rounded-lg bg-indigo-700 px-6 py-2 text-sm font-semibold text-white shadow-md transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg sm:w-auto sm:px-8 sm:py-3 sm:text-base">
                       View All HOD's →
                     </button>
                   </Link>
