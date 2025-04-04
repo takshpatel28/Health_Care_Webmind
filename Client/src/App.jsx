@@ -42,7 +42,7 @@ const App = () => {
         <Route path='/trustee-dashboard' element={<TrusteeDashboard />}/>
         <Route path='/doctorchat' element={<Doctorchat />}/>
       </Routes>
-      <Footer />
+      {/* <Footer /> */}
     </BrowserRouter>
   )
 }
