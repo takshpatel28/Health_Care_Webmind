@@ -1,27 +1,54 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { FaImage, FaPaperPlane, FaTimes, FaRobot, FaUser, FaPlus, FaStethoscope } from 'react-icons/fa';
+import { FaImage, FaPaperPlane, FaTimes, FaRobot, FaUser, FaPlus, FaStethoscope, FaHistory } from 'react-icons/fa';
 import { IoMdMedical } from 'react-icons/io';
-import '../index.css'
+import '../index.css';
 
 export default function DoctorChat() {
     const [message, setMessage] = useState('');
     const [image, setImage] = useState(null);
-    const [chatHistory, setChatHistory] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [chatSessions, setChatSessions] = useState([]);
+    const [currentSessionId, setCurrentSessionId] = useState(null);
+    const [showChatHistory, setShowChatHistory] = useState(false);
     const fileInputRef = useRef(null);
     const messagesEndRef = useRef(null);
+
+    // Initialize with a default session if none exists
+    useEffect(() => {
+        if (chatSessions.length === 0) {
+            createNewSession();
+        }
+    }, []);
 
     // Auto-scroll to bottom when messages update
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chatHistory]);
+    }, [currentSessionId, chatSessions]);
+
+    const getCurrentChat = () => {
+        return chatSessions.find(session => session.id === currentSessionId) || 
+               chatSessions[chatSessions.length - 1];
+    };
+
+    const createNewSession = () => {
+        const newSession = {
+            id: Date.now().toString(),
+            title: `Chat ${chatSessions.length + 1}`,
+            history: [],
+            createdAt: new Date().toISOString()
+        };
+        setChatSessions([...chatSessions, newSession]);
+        setCurrentSessionId(newSession.id);
+        return newSession;
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!message && !image) return;
 
         setIsLoading(true);
+        const currentChat = getCurrentChat();
 
         try {
             const formData = new FormData();
@@ -29,7 +56,7 @@ export default function DoctorChat() {
             if (image) {
                 formData.append('image', image);
             }
-            formData.append('chatHistory', JSON.stringify(chatHistory));
+            formData.append('chatHistory', JSON.stringify(currentChat.history));
 
             const response = await axios.post(
                 'https://health-care-webmind.onrender.com/api/chat',
@@ -41,11 +68,26 @@ export default function DoctorChat() {
                 }
             );
 
-            setChatHistory([
-                ...chatHistory,
-                { role: 'user', content: message || 'Image uploaded' },
-                { role: 'assistant', content: response.data.response },
-            ]);
+            // Update the current session
+            const updatedSessions = chatSessions.map(session => {
+                if (session.id === currentSessionId) {
+                    return {
+                        ...session,
+                        history: [
+                            ...session.history,
+                            { role: 'user', content: message || 'Image uploaded' },
+                            { role: 'assistant', content: response.data.response },
+                        ],
+                        // Update title if it's the first message
+                        title: session.history.length === 0 
+                            ? message.substring(0, 20) + (message.length > 20 ? '...' : '') 
+                            : session.title
+                    };
+                }
+                return session;
+            });
+
+            setChatSessions(updatedSessions);
             setMessage('');
             setImage(null);
             if (fileInputRef.current) {
@@ -72,10 +114,15 @@ export default function DoctorChat() {
         }
     };
 
+    const switchSession = (sessionId) => {
+        setCurrentSessionId(sessionId);
+        setShowChatHistory(false);
+    };
+
     return (
         <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-            {/* Header */}
-            {/* <header className="bg-white shadow-sm py-4 px-6 border-b border-gray-100">
+            {/* Header with chat controls */}
+            <header className="bg-white shadow-sm py-4 px-6 border-b border-gray-100">
                 <div className="max-w-3xl mx-auto flex items-center">
                     <div className="flex items-center">
                         <div className="bg-blue-600 p-2 rounded-lg mr-3">
@@ -83,16 +130,63 @@ export default function DoctorChat() {
                         </div>
                         <h1 className="text-xl font-bold text-gray-800">Dr. AI Assistant</h1>
                     </div>
-                    <div className="ml-auto bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
-                        Online
+                    <div className="ml-auto flex space-x-2">
+                        <button 
+                            onClick={() => setShowChatHistory(!showChatHistory)}
+                            className="p-2 rounded-lg bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+                            title="Chat history"
+                        >
+                            <FaHistory />
+                        </button>
+                        <button 
+                            onClick={createNewSession}
+                            className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                            title="New chat"
+                        >
+                            <FaPlus />
+                        </button>
                     </div>
                 </div>
-            </header> */}
+            </header>
+
+            {/* Chat history sidebar */}
+            {showChatHistory && (
+                <div className="fixed inset-0 z-10 bg-black bg-opacity-50 flex">
+                    <div className="bg-white w-64 h-full shadow-lg transform transition-all">
+                        <div className="p-4 border-b border-gray-200">
+                            <h2 className="font-bold text-lg">Chat History</h2>
+                            <button 
+                                onClick={() => setShowChatHistory(false)}
+                                className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100"
+                            >
+                                <FaTimes />
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto h-full">
+                            {chatSessions.map(session => (
+                                <div 
+                                    key={session.id}
+                                    onClick={() => switchSession(session.id)}
+                                    className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-blue-50 ${currentSessionId === session.id ? 'bg-blue-100' : ''}`}
+                                >
+                                    <div className="font-medium truncate">{session.title}</div>
+                                    <div className="text-xs text-gray-500">
+                                        {new Date(session.createdAt).toLocaleString()}
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                        {session.history.length} messages
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Chat Container */}
             <main className="flex-1 overflow-y-auto p-4 pb-24">
                 <div className="max-w-3xl mx-auto space-y-4">
-                    {chatHistory.length === 0 && (
+                    {getCurrentChat()?.history.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-center py-12 animate-fade-in">
                             <div className="bg-white p-5 rounded-2xl shadow-sm mb-6 transform transition-all hover:scale-105">
                                 <div className="bg-blue-100 p-4 rounded-full inline-block mb-4">
@@ -120,7 +214,7 @@ export default function DoctorChat() {
                         </div>
                     )}
 
-                    {chatHistory.map((msg, index) => (
+                    {getCurrentChat()?.history.map((msg, index) => (
                         <div 
                             key={index} 
                             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-message-in`}
