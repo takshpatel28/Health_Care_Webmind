@@ -53,6 +53,7 @@ const upload = multer({
 //       res.status(500).json({ error: 'Failed to process chat request' });
 //     }
 //   });
+const DOCTOR_SYSTEM_PROMPT = `...`;
 
 app.post('/api/chat', upload.single('image'), async (req, res) => {
   try {
