@@ -1,11 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FaPhoneAlt, FaMapMarkerAlt, FaEnvelope, FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn, FaHeartbeat } from 'react-icons/fa';
+import { useLocation } from 'react-router-dom';
 
 const Footer = () => {
+  const location = useLocation();
   return (
-    <footer className="bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 pt-16 pb-8 relative overflow-hidden border-t border-gray-200">
-      {/* Decorative elements */}
+    <footer className={`bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 pt-16 pb-8 relative overflow-hidden border-t border-gray-200 ${location.pathname == '/doctorchat' ? 'hidden' : 'block'}`}>
       <div className="absolute -top-20 -right-20 w-64 h-64 bg-gray-200 rounded-full filter blur-3xl opacity-30"></div>
       <div className="absolute -bottom-40 -left-20 w-96 h-96 bg-gray-300 rounded-full filter blur-3xl opacity-20"></div>
       
