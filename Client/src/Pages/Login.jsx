@@ -85,7 +85,7 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { 
-          redirectTo: "https://health-care-webmind-1.onrender.com/profile-completion",
+          redirectTo: "http://localhost:5173/profile-completion",
          },
       });
       if (error) throw error;

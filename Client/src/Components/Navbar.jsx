@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { data, Link, useNavigate } from 'react-router-dom';
-import { FiMenu, FiX, FiUser, FiLogOut, FiHome, FiActivity, FiUsers, FiInfo } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiMenu, FiX, FiUser, FiLogOut, FiHome, FiActivity, FiUsers, FiInfo, FiMessageSquare } from 'react-icons/fi';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { supabase } from '../helper/supabaseClient';
 import Logo from '../assets/logo.png';
@@ -13,7 +13,6 @@ const Navbar = () => {
   const [activeButton, setActiveButton] = useState(null);
   const [ProfileImg, setProfileImg] = useState(null);
   const navigate = useNavigate();
-
 
   // Scroll animations
   const { scrollY } = useScroll();
@@ -46,22 +45,21 @@ const Navbar = () => {
             .eq('id', session.user.id)
             .single();
           setRole(data?.role || null);
-        }
 
-        if (session?.user) {
-          const { data } = await supabase
+          const { data: avatarData } = await supabase
             .from('doctors')
             .select('avatar_url')
             .eq('id', session.user.id)
             .single();
-
-          setProfileImg(data.avatar_url);
+          setProfileImg(avatarData?.avatar_url || null);
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
       }
     };
+
     fetchUserData();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user);
@@ -76,6 +74,7 @@ const Navbar = () => {
         setRole(null);
       }
     });
+
     return () => subscription?.unsubscribe();
   }, []);
 
@@ -135,6 +134,9 @@ const Navbar = () => {
               <NavLink to="/doctors" icon={<FiUsers />} text="Doctors" />
             )}
             <NavLink to="/about" icon={<FiInfo />} text="About" />
+            {user && (
+              <NavLink to="/doctorchat" icon={<FiMessageSquare />} text="DoctorChat" />
+            )}
           </div>
 
           <div className="flex items-center space-x-4">
@@ -157,16 +159,6 @@ const Navbar = () => {
                   >
                     Login
                   </button>
-                  {activeButton === 'login' && (
-                    <motion.div
-                      className="absolute inset-0 bg-blue-500 z-0"
-                      initial={{ x: '-100%' }}
-                      animate={{ x: 0 }}
-                      exit={{ x: '100%' }}
-                      transition={{ duration: 0.5, ease: 'easeInOut' }}
-                      layoutId="buttonBackground"
-                    />
-                  )}
                 </motion.div>
 
                 <motion.div
@@ -186,16 +178,6 @@ const Navbar = () => {
                   >
                     Sign Up
                   </button>
-                  {activeButton === 'signup' && (
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 z-0"
-                      initial={{ x: '-100%' }}
-                      animate={{ x: 0 }}
-                      exit={{ x: '100%' }}
-                      transition={{ duration: 0.5, ease: 'easeInOut' }}
-                      layoutId="buttonBackground"
-                    />
-                  )}
                 </motion.div>
               </>
             ) : (
@@ -208,22 +190,10 @@ const Navbar = () => {
                 >
                   <div className="relative">
                     <motion.img
-                      src={ProfileImg ? ProfileImg : 'https://media.istockphoto.com/id/1337144146/vector/default-avatar-profile-icon-vector.jpg?s=612x612&w=0&k=20&c=BIbFwuv7FxTWvh5S3vB6bkT0Qv8Vn8N5Ffseq84ClGI='}
+                      src={ProfileImg || 'https://via.placeholder.com/150'}
                       alt="Profile"
                       className="w-9 h-9 rounded-full border-2 border-transparent group-hover:border-blue-400 transition-all duration-300"
                       whileTap={{ scale: 0.9 }}
-                    />
-                    <motion.div
-                      className="absolute -bottom-1 -right-1 bg-green-400 rounded-full w-3 h-3 border-2 border-white"
-                      animate={{
-                        scale: [1, 1.2, 1],
-                        boxShadow: ['0 0 0 0 rgba(74, 222, 128, 0)', '0 0 0 4px rgba(74, 222, 128, 0.3)', '0 0 0 0 rgba(74, 222, 128, 0)']
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        repeatType: 'loop'
-                      }}
                     />
                   </div>
                   <span className="hidden md:inline font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
@@ -310,83 +280,8 @@ const Navbar = () => {
                   <MobileNavLink to="/doctors" icon={<FiUsers />} text="Doctors" onClick={() => setIsOpen(false)} />
                 )}
                 <MobileNavLink to="/about" icon={<FiInfo />} text="About" onClick={() => setIsOpen(false)} />
-
-                {!user ? (
-                  <div className="flex flex-col space-y-3 pt-4">
-                    <motion.div
-                      className="relative overflow-hidden rounded-lg"
-                      initial={false}
-                      animate={{
-                        backgroundColor: activeButton === 'login' ? '#3b82f6' : '#f9fafb'
-                      }}
-                      transition={{ duration: 0.5 }}
-                    >
-                      <button
-                        onClick={() => handleButtonClick('login')}
-                        className="relative z-10 w-full px-4 py-3 text-center font-medium transition-colors duration-300"
-                        style={{
-                          color: activeButton === 'login' ? 'white' : '#374151'
-                        }}
-                      >
-                        Login
-                      </button>
-                      {activeButton === 'login' && (
-                        <motion.div
-                          className="absolute inset-0 bg-blue-500 z-0"
-                          initial={{ x: '-100%' }}
-                          animate={{ x: 0 }}
-                          exit={{ x: '100%' }}
-                          transition={{ duration: 0.5, ease: 'easeInOut' }}
-                          layoutId="mobileButtonBackground"
-                        />
-                      )}
-                    </motion.div>
-
-                    <motion.div
-                      className="relative overflow-hidden rounded-lg"
-                      initial={false}
-                      animate={{
-                        backgroundColor: activeButton === 'signup' ? '#3b82f6' : 'transparent',
-                        backgroundImage: activeButton === 'signup' ? 'none' : 'linear-gradient(to right, #3b82f6, #2563eb)'
-                      }}
-                      transition={{ duration: 0.5 }}
-                    >
-                      <button
-                        onClick={() => handleButtonClick('signup')}
-                        className="relative z-10 w-full px-4 py-3 text-center font-medium text-white transition-colors duration-300"
-                      >
-                        Sign Up
-                      </button>
-                      {activeButton === 'signup' && (
-                        <motion.div
-                          className="absolute inset-0 bg-blue-500 z-0"
-                          initial={{ x: '-100%' }}
-                          animate={{ x: 0 }}
-                          exit={{ x: '100%' }}
-                          transition={{ duration: 0.5, ease: 'easeInOut' }}
-                          layoutId="mobileButtonBackground"
-                        />
-                      )}
-                    </motion.div>
-                  </div>
-                ) : (
-                  <>
-                    {(role === "HOD" || role === "Trustee") && (
-                      <MobileNavLink to="/dashboard" icon={<FiActivity />} text="Dashboard" onClick={() => setIsOpen(false)} />
-                    )}
-                    {role === "Doctor" && (
-                      <MobileNavLink to="/profile" icon={<FiUser />} text="Profile" onClick={() => setIsOpen(false)} />
-                    )}
-                    <motion.button
-                      onClick={handleLogout}
-                      className="w-full mt-4 px-4 py-3 text-left bg-gray-50 rounded-lg text-red-500 font-medium hover:bg-gray-100 transition-colors duration-300 flex items-center"
-                      whileHover={{ x: 5 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <FiLogOut className="mr-2" />
-                      Logout
-                    </motion.button>
-                  </>
+                {user && (
+                  <MobileNavLink to="/doctorchat" icon={<FiMessageSquare />} text="DoctorChat" onClick={() => setIsOpen(false)} />
                 )}
               </div>
             </motion.div>
