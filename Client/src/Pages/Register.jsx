@@ -246,6 +246,8 @@ const Register = () => {
             bio: formData.bio || null,
             experienceyears: experienceYears,
             departmentCategory: formData.departmentCategory || null,
+            email: formData.email,
+            user_id: data.user.id
           });
 
         if (insertError) {
