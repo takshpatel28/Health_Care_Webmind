@@ -58,6 +58,31 @@ export default function DoctorChat() {
             }
             formData.append('chatHistory', JSON.stringify(currentChat.history));
 
+            // Add the user message immediately (including image if present)
+            const userMessage = {
+                role: 'user',
+                content: message || 'Image uploaded',
+                ...(image && { imageUrl: URL.createObjectURL(image) }) // Store image URL for display
+            };
+
+            // Update the session with user message first (optimistic update)
+            const updatedSessionsWithUserMessage = chatSessions.map(session => {
+                if (session.id === currentSessionId) {
+                    return {
+                        ...session,
+                        history: [
+                            ...session.history,
+                            userMessage
+                        ],
+                        title: session.history.length === 0 
+                            ? (message || 'Image query').substring(0, 20) + (message?.length > 20 ? '...' : '') 
+                            : session.title
+                    };
+                }
+                return session;
+            });
+            setChatSessions(updatedSessionsWithUserMessage);
+
             const response = await axios.post(
                 'https://health-care-webmind.onrender.com/api/chat',
                 formData,
@@ -68,20 +93,15 @@ export default function DoctorChat() {
                 }
             );
 
-            // Update the current session
-            const updatedSessions = chatSessions.map(session => {
+            // Update with the assistant's response
+            const updatedSessions = updatedSessionsWithUserMessage.map(session => {
                 if (session.id === currentSessionId) {
                     return {
                         ...session,
                         history: [
                             ...session.history,
-                            { role: 'user', content: message || 'Image uploaded' },
-                            { role: 'assistant', content: response.data.response },
-                        ],
-                        // Update title if it's the first message
-                        title: session.history.length === 0 
-                            ? message.substring(0, 20) + (message.length > 20 ? '...' : '') 
-                            : session.title
+                            { role: 'assistant', content: response.data.response }
+                        ]
                     };
                 }
                 return session;
@@ -95,6 +115,8 @@ export default function DoctorChat() {
             }
         } catch (error) {
             console.error('Error:', error);
+            // Roll back the optimistic update if there's an error
+            setChatSessions(chatSessions);
             alert(error.response?.data?.error || 'Error sending message. Please try again.');
         } finally {
             setIsLoading(false);
@@ -233,12 +255,17 @@ export default function DoctorChat() {
                                     <div className="font-medium text-xs mb-1 opacity-80">
                                         {msg.role === 'user' ? 'You' : 'Dr. AI'}
                                     </div>
-                                    {msg.content.startsWith('data:image') ? (
-                                        <img 
-                                            src={msg.content} 
-                                            alt="Uploaded content" 
-                                            className="rounded-lg max-w-full max-h-60 object-contain mt-2 border border-gray-200 shadow-sm"
-                                        />
+                                    {msg.imageUrl ? (
+                                        <div className="mt-2">
+                                            <img 
+                                                src={msg.imageUrl} 
+                                                alt="Uploaded content" 
+                                                className="rounded-lg max-w-full max-h-60 object-contain border border-gray-200 shadow-sm"
+                                            />
+                                            {msg.content !== 'Image uploaded' && (
+                                                <p className="whitespace-pre-wrap text-sm mt-2">{msg.content}</p>
+                                            )}
+                                        </div>
                                     ) : (
                                         <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
                                     )}
