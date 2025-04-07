@@ -15,14 +15,12 @@ export default function DoctorChat() {
     const fileInputRef = useRef(null);
     const messagesEndRef = useRef(null);
 
-    // Initialize with a default session if none exists
     useEffect(() => {
         if (chatSessions.length === 0) {
             createNewSession();
         }
     }, []);
 
-    // Auto-scroll to bottom when messages update
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [currentSessionId, chatSessions]);
@@ -59,7 +57,7 @@ export default function DoctorChat() {
             }
             formData.append('chatHistory', JSON.stringify(currentChat.history));
 
-            // Add the user message immediately (including file if present)
+            // Add the user message immediately
             const userMessage = {
                 role: 'user',
                 content: message || getFileUploadMessage(file),
@@ -70,7 +68,7 @@ export default function DoctorChat() {
                 })
             };
 
-            // Update the session with user message first (optimistic update)
+            // Optimistic update
             const updatedSessionsWithUserMessage = chatSessions.map(session => {
                 if (session.id === currentSessionId) {
                     return {
@@ -90,7 +88,6 @@ export default function DoctorChat() {
 
             const response = await axios.post(
                 'https://health-care-webmind.onrender.com/api/chat',
-                // 'http://localhost:8080/api/chat',
                 formData,
                 {
                     headers: {
@@ -99,14 +96,18 @@ export default function DoctorChat() {
                 }
             );
 
-            // Update with the assistant's response
+            // Update with assistant's response
             const updatedSessions = updatedSessionsWithUserMessage.map(session => {
                 if (session.id === currentSessionId) {
                     return {
                         ...session,
                         history: [
                             ...session.history,
-                            { role: 'assistant', content: response.data.response }
+                            { 
+                                role: 'assistant', 
+                                content: response.data.response,
+                                isAnalysis: !!file // Mark as analysis response if file was uploaded
+                            }
                         ]
                     };
                 }
@@ -121,7 +122,6 @@ export default function DoctorChat() {
             }
         } catch (error) {
             console.error('Error:', error);
-            // Roll back the optimistic update if there's an error
             setChatSessions(chatSessions);
             alert(error.response?.data?.error || 'Error sending message. Please try again.');
         } finally {
@@ -131,15 +131,20 @@ export default function DoctorChat() {
 
     const getFileUploadMessage = (file) => {
         if (!file) return '';
-        if (file.type.startsWith('image/')) return 'Image uploaded';
-        if (file.type === 'application/pdf') return 'PDF uploaded';
-        return 'Document uploaded';
+        if (file.type.startsWith('image/')) return 'Uploaded medical image for analysis';
+        if (file.type === 'application/pdf') return 'Uploaded medical report for analysis';
+        return 'Uploaded document for analysis';
     };
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
             setFile(e.target.files[0]);
             setShowFileTypeMenu(false);
+            // Auto-focus message input after file selection
+            setTimeout(() => {
+                const input = document.querySelector('input[type="text"]');
+                if (input) input.focus();
+            }, 100);
         }
     };
 
@@ -160,46 +165,90 @@ export default function DoctorChat() {
         
         if (file.type.startsWith('image/')) {
             return (
-                <div className="flex items-center">
+                <div className="flex items-center bg-blue-50 p-3 rounded-lg border border-blue-200">
                     <img
                         src={URL.createObjectURL(file)}
                         alt="Preview"
                         className="h-24 rounded-lg object-cover border border-gray-200 shadow-sm"
                     />
-                    <span className="ml-3 text-sm text-gray-600">{file.name}</span>
+                    <div className="ml-3">
+                        <div className="text-sm font-medium text-gray-800">{file.name}</div>
+                        <div className="text-xs text-gray-500">
+                            {Math.round(file.size / 1024)} KB • {file.type.split('/')[1].toUpperCase()}
+                        </div>
+                        <div className="mt-1 text-xs text-blue-600 font-medium">
+                            Ready for medical analysis
+                        </div>
+                    </div>
                 </div>
             );
         } else if (file.type === 'application/pdf') {
             return (
-                <div className="flex items-center">
-                    <div className="flex items-center justify-center h-24 w-24 bg-red-50 rounded-lg border border-red-200 shadow-sm">
-                        <FaFilePdf className="text-red-600 text-3xl" />
+                <div className="flex items-center bg-red-50 p-3 rounded-lg border border-red-200">
+                    <div className="flex items-center justify-center h-24 w-24 bg-white rounded-lg border border-red-200 shadow-sm">
+                        <FaFilePdf className="text-red-600 text-4xl" />
                     </div>
-                    <span className="ml-3 text-sm text-gray-600">{file.name}</span>
-                </div>
-            );
-        } else {
-            return (
-                <div className="flex items-center">
-                    <div className="flex items-center justify-center h-24 w-24 bg-blue-50 rounded-lg border border-blue-200 shadow-sm">
-                        <FaFileAlt className="text-blue-600 text-3xl" />
+                    <div className="ml-3">
+                        <div className="text-sm font-medium text-gray-800">{file.name}</div>
+                        <div className="text-xs text-gray-500">
+                            {Math.round(file.size / 1024)} KB • PDF
+                        </div>
+                        <div className="mt-1 text-xs text-red-600 font-medium">
+                            Ready for medical report analysis
+                        </div>
                     </div>
-                    <span className="ml-3 text-sm text-gray-600">{file.name}</span>
                 </div>
             );
         }
     };
 
+    // Format assistant's response with better readability for medical analysis
+    const formatMedicalResponse = (content, isAnalysis = false) => {
+        if (!isAnalysis) return content;
+
+        // Add section headers and formatting for analysis responses
+        const sections = content.split('\n\n').filter(part => part.trim().length > 0);
+        
+        return sections.map((section, index) => {
+            if (section.startsWith('**')) {
+                // Header section
+                return (
+                    <div key={index} className="mb-3">
+                        <h3 className="font-bold text-blue-700 text-sm mb-1">
+                            {section.replace(/\*\*/g, '')}
+                        </h3>
+                    </div>
+                );
+            } else if (section.startsWith('- ')) {
+                // Bullet points
+                return (
+                    <ul key={index} className="list-disc pl-5 space-y-1 mb-3">
+                        {section.split('\n').map((item, i) => (
+                            <li key={i} className="text-sm">{item.replace('- ', '')}</li>
+                        ))}
+                    </ul>
+                );
+            } else {
+                // Regular paragraph
+                return (
+                    <p key={index} className="whitespace-pre-wrap text-sm mb-3">
+                        {section}
+                    </p>
+                );
+            }
+        });
+    };
+
     return (
         <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-            {/* Header with chat controls */}
+            {/* Header */}
             <header className="bg-white shadow-sm py-4 px-6 border-b border-gray-100">
                 <div className="max-w-3xl mx-auto flex items-center">
                     <div className="flex items-center">
                         <div className="bg-blue-600 p-2 rounded-lg mr-3">
                             <IoMdMedical className="text-white text-xl" />
                         </div>
-                        <h1 className="text-xl font-bold text-gray-800">Dr. AI Assistant</h1>
+                        <h1 className="text-xl font-bold text-gray-800">Dr. AI Medical Assistant</h1>
                     </div>
                     <div className="ml-auto flex space-x-2">
                         <button 
@@ -225,7 +274,7 @@ export default function DoctorChat() {
                 <div className="fixed inset-0 z-10 bg-black bg-opacity-50 flex">
                     <div className="bg-white w-64 h-full shadow-lg transform transition-all">
                         <div className="p-4 border-b border-gray-200">
-                            <h2 className="font-bold text-lg">Chat History</h2>
+                            <h2 className="font-bold text-lg">Medical Consultations</h2>
                             <button 
                                 onClick={() => setShowChatHistory(false)}
                                 className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100"
@@ -246,6 +295,9 @@ export default function DoctorChat() {
                                     </div>
                                     <div className="text-xs text-gray-500 mt-1">
                                         {session.history.length} messages
+                                        {session.history.some(msg => msg.fileUrl) && (
+                                            <span className="ml-2 text-blue-500">• Contains files</span>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -263,23 +315,23 @@ export default function DoctorChat() {
                                 <div className="bg-blue-100 p-4 rounded-full inline-block mb-4">
                                     <FaRobot className="text-3xl text-blue-600" />
                                 </div>
-                                <h2 className="text-2xl font-semibold text-gray-800 mb-2">How can I help you today?</h2>
+                                <h2 className="text-2xl font-semibold text-gray-800 mb-2">Medical Consultation</h2>
                                 <p className="text-gray-600 max-w-md">
-                                    Ask me anything about health, symptoms, or upload files for analysis.
+                                    Upload medical images, reports, or describe symptoms for detailed analysis.
                                 </p>
                             </div>
                             <div className="grid grid-cols-2 gap-4 max-w-md">
                                 <button 
                                     className="bg-white p-3 rounded-xl border border-gray-200 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700"
-                                    onClick={() => setMessage("What are common flu symptoms?")}
+                                    onClick={() => setMessage("Can you analyze this X-ray for any abnormalities?")}
                                 >
-                                    Flu symptoms
+                                    Analyze X-ray
                                 </button>
                                 <button 
                                     className="bg-white p-3 rounded-xl border border-gray-200 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700"
-                                    onClick={() => setMessage("How to treat a headache?")}
+                                    onClick={() => setMessage("Please review my blood test results")}
                                 >
-                                    Headache remedies
+                                    Blood test review
                                 </button>
                             </div>
                         </div>
@@ -310,7 +362,7 @@ export default function DoctorChat() {
                                                 <div>
                                                     <img 
                                                         src={msg.fileUrl} 
-                                                        alt="Uploaded content" 
+                                                        alt="Medical image" 
                                                         className="rounded-lg max-w-full max-h-60 object-contain border border-gray-200 shadow-sm"
                                                     />
                                                     <div className="text-xs text-gray-500 mt-1">{msg.fileName}</div>
@@ -335,7 +387,9 @@ export default function DoctorChat() {
                                             )}
                                         </div>
                                     ) : (
-                                        <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                                        <div className={`${msg.isAnalysis ? 'medical-analysis' : ''}`}>
+                                            {formatMedicalResponse(msg.content, msg.isAnalysis)}
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -351,6 +405,7 @@ export default function DoctorChat() {
                                     </div>
                                 </div>
                                 <div className="px-4 py-3 bg-white text-gray-800 border border-gray-100 rounded-xl rounded-bl-none shadow-sm">
+                                    <div className="font-medium text-xs mb-1 opacity-80">Dr. AI is analyzing</div>
                                     <div className="flex space-x-2">
                                         <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
                                         <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
@@ -387,7 +442,7 @@ export default function DoctorChat() {
                                 type="text"
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
-                                placeholder="Message Dr. AI..."
+                                placeholder="Describe symptoms or ask about medical reports..."
                                 disabled={isLoading}
                                 className="flex-1 py-3 px-4 bg-transparent outline-none text-sm rounded-l-xl"
                             />
@@ -399,7 +454,7 @@ export default function DoctorChat() {
                                         className={`p-2 rounded-lg cursor-pointer transition-all ${isLoading 
                                             ? 'text-gray-400 cursor-not-allowed' 
                                             : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'}`}
-                                        title="Upload file"
+                                        title="Upload medical file"
                                         disabled={isLoading}
                                     >
                                         <FaImage size={18} />
@@ -409,10 +464,10 @@ export default function DoctorChat() {
                                         <div className="absolute bottom-12 right-0 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-48">
                                             <label 
                                                 className="flex items-center px-4 py-2 hover:bg-blue-50 cursor-pointer"
-                                                title="Upload image"
+                                                title="Upload medical image (X-ray, MRI, etc.)"
                                             >
                                                 <FaImage className="mr-2 text-blue-600" />
-                                                <span>Image</span>
+                                                <span>Medical Image</span>
                                                 <input
                                                     type="file"
                                                     accept="image/*"
@@ -423,26 +478,13 @@ export default function DoctorChat() {
                                             </label>
                                             <label 
                                                 className="flex items-center px-4 py-2 hover:bg-blue-50 cursor-pointer"
-                                                title="Upload PDF"
+                                                title="Upload medical report (PDF)"
                                             >
                                                 <FaFilePdf className="mr-2 text-red-600" />
-                                                <span>PDF</span>
+                                                <span>Medical Report</span>
                                                 <input
                                                     type="file"
                                                     accept="application/pdf"
-                                                    onChange={handleFileChange}
-                                                    className="hidden"
-                                                />
-                                            </label>
-                                            <label 
-                                                className="flex items-center px-4 py-2 hover:bg-blue-50 cursor-pointer"
-                                                title="Upload document"
-                                            >
-                                                <FaFileAlt className="mr-2 text-blue-600" />
-                                                <span>Document</span>
-                                                <input
-                                                    type="file"
-                                                    accept=".doc,.docx,.txt,.rtf"
                                                     onChange={handleFileChange}
                                                     className="hidden"
                                                 />
@@ -465,7 +507,7 @@ export default function DoctorChat() {
                     </form>
                     
                     <div className="text-center mt-3 text-xs text-gray-500">
-                        Dr. AI may produce inaccurate information. Always consult a real doctor for medical advice.
+                        Dr. AI provides preliminary analysis only. For medical emergencies, call your local emergency number.
                     </div>
                 </div>
             </footer>

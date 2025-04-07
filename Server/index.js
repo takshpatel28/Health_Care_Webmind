@@ -8,6 +8,7 @@ const axios = require("axios");
 const multer = require("multer");
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
+const Tesseract = require("tesseract.js"); // Import Tesseract.js for OCR
 
 app.use(express.json());
 app.use(cors());
@@ -93,6 +94,19 @@ async function extractTextFromDOCX(docxBuffer) {
   }
 }
 
+// Extract text from images using Tesseract.js
+async function extractTextFromImage(imageBuffer) {
+  try {
+    const { data: { text } } = await Tesseract.recognize(imageBuffer, "eng", {
+      logger: (info) => console.log(info), // Log OCR progress
+    });
+    return text;
+  } catch (error) {
+    console.error("Error extracting text from image:", error);
+    throw new Error("Could not extract text from image");
+  }
+}
+
 app.post("/api/chat", upload.single("file"), async (req, res) => {
   try {
     const { message, chatHistory = [] } = req.body;
@@ -135,6 +149,8 @@ app.post("/api/chat", upload.single("file"), async (req, res) => {
           file.mimetype === "application/msword"
         ) {
           fileContent = file.buffer.toString("utf-8");
+        } else if (file.mimetype.startsWith("image/")) {
+          fileContent = await extractTextFromImage(file.buffer); // Use OCR for images
         }
       } catch (error) {
         console.error("Error parsing file:", error.message);
