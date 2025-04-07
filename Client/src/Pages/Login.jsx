@@ -70,10 +70,9 @@ const Login = () => {
       }
     } catch (error) {
       setMessage({
-        text: "Email is not confirm, so check your email and confirm then enter websites" || "An error occurred.",
+        text: error?.message || "An error occurred.",
         type: "error",
       });
-      alert("Email is not confirm, so check your email and confirm then enter websites")
       setPassword("");
     } finally {
       setLoading(false);

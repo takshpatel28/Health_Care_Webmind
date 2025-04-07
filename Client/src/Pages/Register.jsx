@@ -2,6 +2,7 @@ import { useState } from "react";
 import { UserPlus, Building2, Stethoscope, Users, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../helper/supabaseClient";
+import { toast } from "react-toastify";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -254,6 +255,7 @@ const Register = () => {
           setError(insertError.message);
         } else {
           setSuccess("Registration successful! Please check your email to verify your account.");
+          toast("Please check your email to verify your account.");
           setTimeout(() => {
             navigate("/login");
           }, 3000);

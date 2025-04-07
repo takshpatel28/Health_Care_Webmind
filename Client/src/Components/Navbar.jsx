@@ -85,6 +85,7 @@ const Navbar = () => {
 
   const handleButtonClick = (buttonName) => {
     setActiveButton(buttonName);
+    setIsOpen(false); // Close mobile menu when a button is clicked
     if (buttonName === 'login') {
       navigate('/login');
     } else if (buttonName === 'signup') {
@@ -190,7 +191,7 @@ const Navbar = () => {
                 >
                   <div className="relative">
                     <motion.img
-                      src={ProfileImg || 'https://via.placeholder.com/150'}
+                      src={ProfileImg || 'https://media.istockphoto.com/id/1337144146/vector/default-avatar-profile-icon-vector.jpg?s=612x612&w=0&k=20&c=BIbFwuv7FxTWvh5S3vB6bkT0Qv8Vn8N5Ffseq84ClGI='}
                       alt="Profile"
                       className="w-9 h-9 rounded-full border-2 border-transparent group-hover:border-blue-400 transition-all duration-300"
                       whileTap={{ scale: 0.9 }}
@@ -282,6 +283,49 @@ const Navbar = () => {
                 <MobileNavLink to="/about" icon={<FiInfo />} text="About" onClick={() => setIsOpen(false)} />
                 {user && (
                   <MobileNavLink to="/doctorchat" icon={<FiMessageSquare />} text="DoctorChat" onClick={() => setIsOpen(false)} />
+                )}
+                
+                {/* Show login/signup buttons in mobile menu when user is not logged in */}
+                {!user && (
+                  <>
+                    <motion.div
+                      className="relative overflow-hidden rounded-lg"
+                      initial={false}
+                      animate={{
+                        backgroundColor: activeButton === 'login' ? '#3b82f6' : 'transparent'
+                      }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <button
+                        onClick={() => handleButtonClick('login')}
+                        className="w-full text-left px-4 py-3 text-base font-medium transition-colors duration-300"
+                        style={{
+                          color: activeButton === 'login' ? 'white' : '#4b5563'
+                        }}
+                      >
+                        Login
+                      </button>
+                    </motion.div>
+
+                    <motion.div
+                      className="relative overflow-hidden rounded-lg"
+                      initial={false}
+                      animate={{
+                        backgroundColor: activeButton === 'signup' ? '#3b82f6' : 'transparent'
+                      }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <button
+                        onClick={() => handleButtonClick('signup')}
+                        className="w-full text-left px-4 py-3 text-base font-medium transition-colors duration-300"
+                        style={{
+                          color: activeButton === 'signup' ? 'white' : '#4b5563'
+                        }}
+                      >
+                        Sign Up
+                      </button>
+                    </motion.div>
+                  </>
                 )}
               </div>
             </motion.div>
