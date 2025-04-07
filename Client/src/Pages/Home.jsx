@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react';
 import { FaArrowRight, FaArrowLeft, FaStethoscope, FaUserMd, FaClinicMedical, FaCalendarAlt, FaStar, FaHeartbeat, FaProcedures, FaPills } from 'react-icons/fa';
 import { motion, useAnimation } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../helper/supabaseClient';
 
 const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
+  const navigate = useNavigate();
 
   // Animation controls for each section
   const controls1 = useAnimation();
@@ -54,6 +59,27 @@ const Home = () => {
     else controls6.start("hidden");
   }, [controls6, inView6]);
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        setUser(session.user);
+
+        // Fetch user role (e.g., doctor, trustee, etc.)
+        const { data } = await supabase
+          .from('users') // Adjust table name if needed
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        setRole(data?.role || null);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
   const doctors = [
     // ... (same doctors array as before)
   ];
@@ -64,6 +90,20 @@ const Home = () => {
 
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev === 0 ? doctors.length - 1 : prev - 1));
+  };
+
+  const handleGetStarted = () => {
+    if (!user) {
+      navigate('/login'); // Redirect to sign-in page if not logged in
+    } else if (role === 'Doctor') {
+      navigate('/profile'); // Redirect to profile page for doctors
+    } else if (role === 'HOD') {
+      navigate('/dashboard'); // Redirect to dashboard for trustees
+    }else if (role === 'Trustee') {
+      navigate('/dashboard'); // Redirect to dashboard for trustees
+    }else {
+      navigate('/profile'); // Default to profile page for other logged-in users
+    }
   };
 
   useEffect(() => {
@@ -166,10 +206,10 @@ const Home = () => {
                 transition={{ delay: 0.4 }}
                 className="flex flex-col sm:flex-row gap-4"
               >
-                <button className="bg-white hover:bg-gray-100 text-teal-700 font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center">
+                <button className="bg-white hover:bg-gray-100 text-teal-700 font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center" onClick={handleGetStarted}>
                   Get Started <FaArrowRight className="ml-2" />
                 </button>
-                <button className="bg-transparent hover:bg-white/10 border-2 border-white/50 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105 hover:border-white/80 flex items-center justify-center">
+                <button className="bg-transparent hover:bg-white/10 border-2 border-white/50 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105 hover:border-white/80 flex items-center justify-center" onClick={()=>navigate('/about')}>
                   Learn More
                 </button>
               </motion.div>
@@ -411,7 +451,7 @@ const Home = () => {
             variants={fadeInUp}
             transition={{ delay: 0.4 }}
           >
-            <button className="bg-white hover:bg-gray-100 text-teal-700 font-bold py-4 px-12 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-lg">
+            <button className="bg-white hover:bg-gray-100 text-teal-700 font-bold py-4 px-12 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-lg" onClick={()=>navigate('/signup')}>
               Request a Demo
             </button>
           </motion.div>
