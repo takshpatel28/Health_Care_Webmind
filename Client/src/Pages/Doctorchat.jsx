@@ -89,8 +89,8 @@ export default function DoctorChat() {
             setChatSessions(updatedSessionsWithUserMessage);
 
             const response = await axios.post(
-                // 'https://health-care-webmind.onrender.com/api/chat',
-                'http://localhost:8080/api/chat',
+                'https://health-care-webmind.onrender.com/api/chat',
+                // 'http://localhost:8080/api/chat',
                 formData,
                 {
                     headers: {
