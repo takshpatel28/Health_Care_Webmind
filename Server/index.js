@@ -151,7 +151,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
     if (
-      file.mimetype.match(/image\/(jpeg|png|jpg|gif)/) ||
+      file.mimetype.match(/image\/(jpeg|png|jpg|gif)/) || 
       file.mimetype === 'application/pdf'
     ) {
       cb(null, true);
@@ -170,8 +170,8 @@ app.post('/api/chat', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Please send a message or file' });
     }
 
-    const parsedChatHistory = typeof chatHistory === 'string'
-      ? JSON.parse(chatHistory)
+    const parsedChatHistory = typeof chatHistory === 'string' 
+      ? JSON.parse(chatHistory) 
       : chatHistory;
 
     const messages = [];
@@ -189,15 +189,27 @@ app.post('/api/chat', upload.single('file'), async (req, res) => {
       const base64File = file.buffer.toString('base64');
       const fileUrl = `data:${file.mimetype};base64,${base64File}`;
 
+      const content = [
+        { type: 'text', text: message || 'Please analyze this document' }
+      ];
+
+      if (file.mimetype === 'application/pdf') {
+        // For PDFs, we'll send both the text info and the actual PDF
+        content.push(
+          { type: 'text', text: `PDF file: ${file.originalname}` },
+          { type: 'pdf_url', pdf_url: { url: fileUrl } }
+        );
+      } else {
+        // For images
+        content.push({
+          type: 'image_url',
+          image_url: { url: fileUrl }
+        });
+      }
+
       messages.push({
         role: 'user',
-        content: [
-          { type: 'text', text: message || 'Please analyze this document' },
-          {
-            type: file.mimetype === 'application/pdf' ? 'pdf_url' : 'image_url',
-            [file.mimetype === 'application/pdf' ? 'pdf_url' : 'image_url']: { url: fileUrl }
-          }
-        ]
+        content: content
       });
     } else {
       messages.push({
@@ -206,8 +218,10 @@ app.post('/api/chat', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Determine model based on file type
-    const model = file ? 'llama-3.2-11b-vision-preview' : 'llama3-8b-8192';
+    // Use vision model for images, regular model for PDFs/text
+    const model = file && !file.mimetype.includes('pdf') 
+      ? 'llama-3.2-11b-vision-preview' 
+      : 'llama3-8b-8192';
 
     const response = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
