@@ -11,6 +11,7 @@ import {
   FaHistory,
   FaFilePdf,
   FaFileAlt,
+  FaBars,
 } from "react-icons/fa";
 import { IoMdMedical } from "react-icons/io";
 import "../index.css";
@@ -25,8 +26,29 @@ export default function DoctorChat() {
   const [chatSessions, setChatSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [showFileTypeMenu, setShowFileTypeMenu] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+
+  // Check screen size on load and resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setShowSidebar(false);
+      } else {
+        setShowSidebar(true);
+      }
+    };
+
+    // Set initial state
+    handleResize();
+
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+
+    // Clean up
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load chat sessions from localStorage on component mount
   useEffect(() => {
@@ -195,6 +217,10 @@ export default function DoctorChat() {
 
   const switchSession = (sessionId) => {
     setCurrentSessionId(sessionId);
+    // On mobile, close sidebar after selecting a chat
+    if (window.innerWidth < 768) {
+      setShowSidebar(false);
+    }
   };
 
   const deleteSession = (sessionId, e) => {
@@ -299,7 +325,7 @@ export default function DoctorChat() {
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* Sidebar - Chat History */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <div className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-20 w-64 h-full bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out`}>
         <div className="p-4 border-b border-gray-200 mt-4">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-lg">Medical Consultations</h2>
@@ -369,7 +395,7 @@ export default function DoctorChat() {
             </div>
           ))}
         </div>
-        <div className="p-3 border-t border-gray-200 bg-gray-50">
+        <div className="p-3 border-t border-gray-200 bg-gray-50" >
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white">
               <FaUser size={12} />
@@ -382,18 +408,37 @@ export default function DoctorChat() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white shadow-sm py-4 px-6 border-b border-gray-100 mt-3">
-          <div className="flex items-center">
-            <div className="flex items-center">
-              <div className="bg-blue-600 p-2 rounded-lg mr-3">
-                <IoMdMedical className="text-white text-xl" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-800">
-                Dr. AI Medical Assistant
-              </h1>
-            </div>
-          </div>
-        </header>
+<header className="bg-white shadow-sm py-4 px-6 border-b border-gray-100 mt-3">
+  <div className="flex items-center justify-between">
+    <div className="flex items-center">
+      <button 
+        onClick={() => setShowSidebar(!showSidebar)}
+        className="md:hidden mr-3 p-2 rounded-lg hover:bg-gray-100"
+        aria-label="Toggle chat history"
+      >
+        <div className="flex items-center">
+          <FaHistory className="text-gray-600 mr-2" />
+          <span className="text-sm font-medium">History</span>
+        </div>
+      </button>
+      <div className="flex items-center">
+        <div className="bg-blue-600 p-2 rounded-lg mr-3">
+          <IoMdMedical className="text-white text-xl" />
+        </div>
+        <h1 className="text-xl font-bold text-gray-800">
+          Dr. AI Medical Assistant
+        </h1>
+      </div>
+    </div>
+    <button
+      onClick={createNewSession}
+      className="md:hidden p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+      title="New chat"
+    >
+      <FaPlus size={14} />
+    </button>
+  </div>
+</header>
 
         {/* Chat Container */}
         <main className="flex-1 overflow-y-auto p-4 pb-24 bg-gray-50">
