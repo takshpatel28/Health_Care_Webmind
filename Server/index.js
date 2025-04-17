@@ -1,46 +1,23 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const pdfParse = require('pdf-parse');
-const mammoth = require('mammoth');
-const Tesseract = require('tesseract.js'); // Import Tesseract.js for OCR
-const RoleRouter = require('./Routes/role.routes');
-const TrustyRouter = require('./Routes/trusty.routes');
-
+const express = require("express");
+const RoleRouter = require("./Routes/role.routes");
+const TrustyRouter = require("./Routes/trusty.routes");
+const cors = require("cors");
 const app = express();
-const PORT = process.env.PORT || 5000;
+require("dotenv").config();
+const axios = require("axios");
+const multer = require("multer");
+const pdfParse = require("pdf-parse");
+const mammoth = require("mammoth");
+const Tesseract = require("tesseract.js"); // Import Tesseract.js for OCR
 
-// Configure multer for file uploads (X-ray analysis)
-const xrayStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
+app.use(express.json());
+app.use(cors());
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+app.use("/api", RoleRouter);
+app.use("/api", TrustyRouter);
 
-const xrayFileFilter = (req, file, cb) => {
-  if (!file.mimetype.match(/image\/(jpeg|png|jpg)/)) {
-    return cb(new Error('Only image files are allowed!'), false);
-  }
-  cb(null, true);
-};
-
-const xrayUpload = multer({ 
-  storage: xrayStorage,
-  limits: { fileSize: MAX_FILE_SIZE },
-  fileFilter: xrayFileFilter
-});
-
-// Configure file uploads (medical chat)
-const medicalChatUpload = multer({
+// Configure file uploads
+const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
   fileFilter: (req, file, cb) => {
@@ -69,15 +46,6 @@ const medicalChatUpload = multer({
   },
 });
 
-app.use(cors());
-app.use(express.json());
-app.use('/uploads', express.static('uploads'));
-app.use("/api", RoleRouter);
-app.use("/api", TrustyRouter);
-
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-
 const DOCTOR_SYSTEM_PROMPT = `
 You are Dr. AI, an adaptive medical assistant capable of handling both routine health questions and complex cases (cancer, rare diseases, lab/imaging reports). Adjust your response depth based on the query:
 
@@ -103,120 +71,6 @@ Ethics:
 Never diagnose definitively without tests.
 For terminal cases: "Let's discuss goals of care with your doctor."
 `;
-
-// Create uploads directory if it doesn't exist
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
-
-// Error handling middleware for file uploads
-app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File size too large. Maximum 5MB allowed.' });
-    }
-    return res.status(400).json({ error: err.message });
-  } else if (err) {
-    return res.status(400).json({ error: err.message });
-  }
-  next();
-});
-
-// X-ray analysis endpoint
-app.post('/api/analyze-xray', xrayUpload.single('image'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No X-ray image uploaded' });
-    }
-
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        model: "meta-llama/llama-4-maverick:free",
-        messages: [
-          {
-            role: "system",
-            content: "You are a medical diagnostic assistant specialized in radiology. Analyze X-ray images and provide professional findings in medical terminology. Be concise and focus on abnormalities, potential diagnoses, and recommended next steps."
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Please analyze this X-ray image and provide a diagnostic report." },
-              { type: "image_url", image_url: { url: imageUrl } }
-            ]
-          }
-        ]
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'HTTP-Referer': 'http://localhost:3000',
-          'X-Title': 'Medical Diagnosis App'
-        }
-      }
-    );
-
-    res.json({ 
-      report: response.data.choices[0].message.content,
-      imageUrl 
-    });
-  } catch (error) {
-    console.error('Error:', error.response?.data || error.message);
-    
-    // Clean up uploaded file if there was an error
-    if (req.file) {
-      fs.unlink(path.join('uploads', req.file.filename), (err) => {
-        if (err) console.error('Error deleting file:', err);
-      });
-    }
-    
-    res.status(500).json({ error: 'Failed to analyze X-ray. Please try again.' });
-  }
-});
-
-// Text chat endpoint
-app.post('/api/medical-chat', async (req, res) => {
-  try {
-    const { messages } = req.body;
-    
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: 'Messages array is required' });
-    }
-
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        model: "meta-llama/llama-4-maverick:free",
-        messages: [
-          {
-            role: "system",
-            content: "You are a medical professional assisting doctors with diagnosis. Provide concise, professional answers using medical terminology. Focus on accuracy and clinical relevance."
-          },
-          ...messages.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          }))
-        ]
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'HTTP-Referer': 'http://localhost:3000',
-          'X-Title': 'Medical Diagnosis App'
-        }
-      }
-    );
-
-    res.json({ 
-      message: response.data.choices[0].message.content
-    });
-  } catch (error) {
-    console.error('Error:', error.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to process medical query' });
-  }
-});
 
 // Extract text from PDF using pdf-parse
 async function extractTextFromPDF(pdfBuffer) {
@@ -253,7 +107,7 @@ async function extractTextFromImage(imageBuffer) {
   }
 }
 
-app.post("/api/chat", medicalChatUpload.single("file"), async (req, res) => {
+app.post("/api/chat", upload.single("file"), async (req, res) => {
   try {
     const { message, chatHistory = [] } = req.body;
     const file = req.file;
@@ -337,7 +191,7 @@ app.post("/api/chat", medicalChatUpload.single("file"), async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${GROQ_API_KEY}`,
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
           "Content-Type": "application/json",
         },
       }
@@ -356,33 +210,7 @@ app.post("/api/chat", medicalChatUpload.single("file"), async (req, res) => {
   }
 });
 
-// Clean up old files periodically
-setInterval(() => {
-  const directory = 'uploads';
-  const threshold = 24 * 60 * 60 * 1000; // 24 hours
-
-  fs.readdir(directory, (err, files) => {
-    if (err) return console.error('Error reading uploads directory:', err);
-
-    files.forEach(file => {
-      const filePath = path.join(directory, file);
-      fs.stat(filePath, (err, stat) => {
-        if (err) return console.error('Error getting file stats:', err);
-
-        const now = new Date().getTime();
-        const fileAge = now - stat.mtime.getTime();
-
-        if (fileAge > threshold) {
-          fs.unlink(filePath, err => {
-            if (err) console.error('Error deleting old file:', err);
-            else console.log('Deleted old file:', file);
-          });
-        }
-      });
-    });
-  });
-}, 12 * 60 * 60 * 1000); // Run every 12 hours
-
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
