@@ -1,708 +1,387 @@
-import { useState, useRef, useEffect } from "react";
-import axios from "axios";
-import {
-  FaImage,
-  FaPaperPlane,
-  FaTimes,
-  FaRobot,
-  FaUser,
-  FaPlus,
-  FaStethoscope,
-  FaHistory,
-  FaFilePdf,
-  FaFileAlt,
-  FaBars,
-} from "react-icons/fa";
-import { IoMdMedical } from "react-icons/io";
-import "../index.css";
 
-// Key for localStorage
-const CHAT_SESSIONS_KEY = "doctor_chat_sessions";
+import { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
+import { FiSend, FiImage, FiMenu, FiPlus, FiMessageSquare, FiTrash2 } from 'react-icons/fi';
 
-export default function DoctorChat() {
-  const [message, setMessage] = useState("");
-  const [file, setFile] = useState(null);
+function DoctorChat() {
+  const [messages, setMessages] = useState([
+    { 
+      role: 'assistant', 
+      content: 'Welcome to SpaceMed AI. Upload medical scans or ask your space medicine questions.',
+      timestamp: new Date().toISOString()
+    }
+  ]);
+  const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [chatSessions, setChatSessions] = useState([]);
-  const [currentSessionId, setCurrentSessionId] = useState(null);
-  const [showFileTypeMenu, setShowFileTypeMenu] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
-  const fileInputRef = useRef(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [conversations, setConversations] = useState([]);
+  const [currentConversationId, setCurrentConversationId] = useState(null);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  // Check screen size on load and resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setShowSidebar(false);
-      } else {
-        setShowSidebar(true);
-      }
-    };
-
-    // Set initial state
-    handleResize();
-
-    // Add event listener
-    window.addEventListener('resize', handleResize);
-
-    // Clean up
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Load chat sessions from localStorage on component mount
-  useEffect(() => {
-    const savedSessions = localStorage.getItem(CHAT_SESSIONS_KEY);
-    if (savedSessions) {
-      const parsedSessions = JSON.parse(savedSessions);
-      setChatSessions(parsedSessions);
-      if (parsedSessions.length > 0) {
-        setCurrentSessionId(parsedSessions[parsedSessions.length - 1].id);
-      } else {
-        createNewSession();
-      }
-    } else {
-      createNewSession();
-    }
-  }, []);
-
-  // Save chat sessions to localStorage whenever they change
-  useEffect(() => {
-    if (chatSessions.length > 0) {
-      localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(chatSessions));
-    }
-  }, [chatSessions]);
-
-  useEffect(() => {
+  // Scroll to bottom of chat
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [currentSessionId, chatSessions]);
-
-  const getCurrentChat = () => {
-    return (
-      chatSessions.find((session) => session.id === currentSessionId) ||
-      chatSessions[chatSessions.length - 1]
-    );
   };
 
-  const createNewSession = () => {
-    const newSession = {
-      id: Date.now().toString(),
-      title: `Chat ${chatSessions.length + 1}`,
-      history: [],
-      createdAt: new Date().toISOString(),
-    };
-    const updatedSessions = [...chatSessions, newSession];
-    setChatSessions(updatedSessions);
-    setCurrentSessionId(newSession.id);
-    return newSession;
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Create a new conversation
+  const newConversation = () => {
+    const newId = Date.now().toString();
+    setCurrentConversationId(newId);
+    setMessages([{ 
+      role: 'assistant', 
+      content: 'Welcome to SpaceMed AI. Upload medical scans or ask your space medicine questions.',
+      timestamp: new Date().toISOString()
+    }]);
+    
+    setConversations(prev => [
+      ...prev,
+      {
+        id: newId,
+        title: 'New Space Chat',
+        timestamp: new Date().toISOString()
+      }
+    ]);
   };
 
+  // Load a conversation
+  const loadConversation = (id) => {
+    setCurrentConversationId(id);
+    setMessages([{ 
+      role: 'assistant', 
+      content: 'Welcome to SpaceMed AI. Upload medical scans or ask your space medicine questions.',
+      timestamp: new Date().toISOString()
+    }]);
+  };
+
+  // Delete a conversation
+  const deleteConversation = (id, e) => {
+    e.stopPropagation();
+    setConversations(prev => prev.filter(conv => conv.id !== id));
+    if (id === currentConversationId) {
+      newConversation();
+    }
+  };
+
+  // Handle text message submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!message && !file) return;
+    if (!input.trim()) return;
 
+    const userMessage = { 
+      role: 'user', 
+      content: input,
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
     setIsLoading(true);
-    const currentChat = getCurrentChat();
 
     try {
-      const formData = new FormData();
-      formData.append("message", message);
-      if (file) {
-        formData.append("file", file);
-      }
-      formData.append("chatHistory", JSON.stringify(currentChat.history));
-
-      // Add the user message immediately
-      const userMessage = {
-        role: "user",
-        content: message || getFileUploadMessage(file),
-        ...(file && {
-          fileUrl: URL.createObjectURL(file),
-          fileType: file.type,
-          fileName: file.name,
-        }),
-      };
-
-      // Optimistic update
-      const updatedSessionsWithUserMessage = chatSessions.map((session) => {
-        if (session.id === currentSessionId) {
-          return {
-            ...session,
-            history: [...session.history, userMessage],
-            title:
-              session.history.length === 0
-                ? (message || getFileUploadMessage(file)).substring(0, 20) +
-                  (message?.length > 20 ? "..." : "")
-                : session.title,
-          };
-        }
-        return session;
-      });
-      setChatSessions(updatedSessionsWithUserMessage);
-
-      const response = await axios.post(
-        "https://health-care-webmind.onrender.com/api/chat",
-        // 'http://localhost:8080/api/chat',
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      // Update with assistant's response
-      const updatedSessions = updatedSessionsWithUserMessage.map((session) => {
-        if (session.id === currentSessionId) {
-          return {
-            ...session,
-            history: [
-              ...session.history,
-              {
-                role: "assistant",
-                content: response.data.response,
-                isAnalysis: !!file, // Mark as analysis response if file was uploaded
-              },
-            ],
-          };
-        }
-        return session;
+      const response = await axios.post('http://localhost:5000/api/medical-chat', {
+        messages: [...messages, userMessage]
       });
 
-      setChatSessions(updatedSessions);
-      setMessage("");
-      setFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: response.data.message,
+        timestamp: new Date().toISOString()
+      }]);
+      
+      if (messages.length === 1) {
+        const title = input.length > 30 ? `${input.substring(0, 30)}...` : input;
+        setConversations(prev => prev.map(conv => 
+          conv.id === currentConversationId ? { ...conv, title } : conv
+        ));
       }
     } catch (error) {
-      console.error("Error:", error);
-      setChatSessions(chatSessions);
-      alert(
-        error.response?.data?.error ||
-          "Error sending message. Please try again."
-      );
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Error processing your request. Please try again.',
+        timestamp: new Date().toISOString()
+      }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getFileUploadMessage = (file) => {
-    if (!file) return "";
-    if (file.type.startsWith("image/"))
-      return "Uploaded medical image for analysis";
-    if (file.type === "application/pdf")
-      return "Uploaded medical report for analysis";
-    return "Uploaded document for analysis";
-  };
+  // Handle X-ray image upload
+  const handleXrayUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setShowFileTypeMenu(false);
-      // Auto-focus message input after file selection
-      setTimeout(() => {
-        const input = document.querySelector('input[type="text"]');
-        if (input) input.focus();
-      }, 100);
+    if (!file.type.match('image.*')) {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Please upload an image file (JPEG, PNG, etc.)',
+        timestamp: new Date().toISOString()
+      }]);
+      return;
     }
-  };
 
-  const removeFile = () => {
-    setFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (file.size > 5 * 1024 * 1024) {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Image size too large. Please upload an image smaller than 5MB.',
+        timestamp: new Date().toISOString()
+      }]);
+      return;
     }
-  };
 
-  const switchSession = (sessionId) => {
-    setCurrentSessionId(sessionId);
-    // On mobile, close sidebar after selecting a chat
-    if (window.innerWidth < 768) {
-      setShowSidebar(false);
-    }
-  };
+    setIsLoading(true);
+    setUploadProgress(0);
+    const formData = new FormData();
+    formData.append('image', file);
 
-  const deleteSession = (sessionId, e) => {
-    e.stopPropagation(); // Prevent triggering the switchSession
-    const updatedSessions = chatSessions.filter(session => session.id !== sessionId);
-    setChatSessions(updatedSessions);
-    
-    // If we're deleting the current session, switch to another one
-    if (sessionId === currentSessionId) {
-      if (updatedSessions.length > 0) {
-        setCurrentSessionId(updatedSessions[updatedSessions.length - 1].id);
-      } else {
-        createNewSession();
-      }
-    }
-  };
+    try {
+      const userMessage = { 
+        role: 'user', 
+        content: `Uploaded medical scan: ${file.name}`,
+        fileInfo: {
+          name: file.name,
+          size: file.size,
+          type: file.type
+        },
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, userMessage]);
 
-  const renderFilePreview = () => {
-    if (!file) return null;
-
-    if (file.type.startsWith("image/")) {
-      return (
-        <div className="flex items-center bg-blue-50 p-3 rounded-lg border border-blue-200">
-          <img
-            src={URL.createObjectURL(file)}
-            alt="Preview"
-            className="h-24 rounded-lg object-cover border border-gray-200 shadow-sm"
-          />
-          <div className="ml-3">
-            <div className="text-sm font-medium text-gray-800">{file.name}</div>
-            <div className="text-xs text-gray-500">
-              {Math.round(file.size / 1024)} KB •{" "}
-              {file.type.split("/")[1].toUpperCase()}
-            </div>
-            <div className="mt-1 text-xs text-blue-600 font-medium">
-              Ready for medical analysis
-            </div>
-          </div>
-        </div>
+      const response = await axios.post(
+        'http://localhost:5000/api/analyze-xray', 
+        formData, 
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+          }
+        }
       );
-    } else if (file.type === "application/pdf") {
-      return (
-        <div className="flex items-center bg-red-50 p-3 rounded-lg border border-red-200">
-          <div className="flex items-center justify-center h-24 w-24 bg-white rounded-lg border border-red-200 shadow-sm">
-            <FaFilePdf className="text-red-600 text-4xl" />
-          </div>
-          <div className="ml-3">
-            <div className="text-sm font-medium text-gray-800">{file.name}</div>
-            <div className="text-xs text-gray-500">
-              {Math.round(file.size / 1024)} KB • PDF
-            </div>
-            <div className="mt-1 text-xs text-red-600 font-medium">
-              Ready for medical report analysis
-            </div>
-          </div>
-        </div>
-      );
+
+      setMessages(prev => [
+        ...prev,
+        { 
+          role: 'assistant', 
+          content: response.data.report,
+          timestamp: new Date().toISOString()
+        },
+        {
+          role: 'system',
+          content: `Medical scan: ${response.data.imageUrl}`,
+          imageUrl: response.data.imageUrl,
+          timestamp: new Date().toISOString()
+        }
+      ]);
+      
+      const title = `Scan: ${file.name}`;
+      setConversations(prev => prev.map(conv => 
+        conv.id === currentConversationId ? { ...conv, title } : conv
+      ));
+    } catch (error) {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: error.response?.data?.error || 'Failed to analyze scan. Please try again.',
+        timestamp: new Date().toISOString()
+      }]);
+    } finally {
+      setIsLoading(false);
+      setUploadProgress(0);
+      e.target.value = '';
     }
   };
 
-  // Format assistant's response with better readability for medical analysis
-  const formatMedicalResponse = (content, isAnalysis = false) => {
-    if (!isAnalysis) return content;
-
-    // Add section headers and formatting for analysis responses
-    const sections = content
-      .split("\n\n")
-      .filter((part) => part.trim().length > 0);
-
-    return sections.map((section, index) => {
-      if (section.startsWith("**")) {
-        // Header section
-        return (
-          <div key={index} className="mb-3">
-            <h3 className="font-bold text-blue-700 text-sm mb-1">
-              {section.replace(/\*\*/g, "")}
-            </h3>
-          </div>
-        );
-      } else if (section.startsWith("- ")) {
-        // Bullet points
-        return (
-          <ul key={index} className="list-disc pl-5 space-y-1 mb-3">
-            {section.split("\n").map((item, i) => (
-              <li key={i} className="text-sm">
-                {item.replace("- ", "")}
-              </li>
-            ))}
-          </ul>
-        );
-      } else {
-        // Regular paragraph
-        return (
-          <p key={index} className="whitespace-pre-wrap text-sm mb-3">
-            {section}
-          </p>
-        );
-      }
-    });
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
   };
+
+  // Handle key down for Shift+Enter
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+    // Shift+Enter will naturally create a new line
+  };
+
+  // Initialize with a new conversation if none exists
+  useEffect(() => {
+    if (conversations.length === 0) {
+      newConversation();
+    }
+  }, []);
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-      {/* Sidebar - Chat History */}
-      <div className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-20 w-64 h-full bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out`}>
-        <div className="p-4 border-b border-gray-200 mt-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold text-lg">Medical Consultations</h2>
-            <button
-              onClick={createNewSession}
-              className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="New chat"
-            >
-              <FaPlus size={14} />
-            </button>
-          </div>
-          <div className="mt-2 relative">
-            <input
-              type="text"
-              placeholder="Search chats..."
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {chatSessions.map((session) => (
-            <div
-              key={session.id}
-              onClick={() => switchSession(session.id)}
-              className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors relative group ${
-                currentSessionId === session.id
-                  ? "bg-blue-100 border-l-4 border-l-blue-600"
-                  : ""
-              }`}
-            >
-              <button
-                onClick={(e) => deleteSession(session.id, e)}
-                className="absolute right-2 top-2 p-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
-                title="Delete chat"
+    <div className="flex h-screen bg-gray-900 text-gray-100">
+      {/* Sidebar */}
+      <div className={`fixed md:relative z-10 w-64 h-full bg-gray-800 text-white transition-all duration-300 ${sidebarOpen ? 'left-0' : '-left-64'} md:left-0`}>
+        <div className="p-4 h-full flex flex-col">
+          <button 
+            onClick={newConversation}
+            className="flex items-center justify-center gap-2 w-full p-3 rounded-md border border-gray-700 hover:bg-gray-700 transition-colors mb-4 bg-gray-800"
+          >
+            <FiPlus /> New Space Chat
+          </button>
+          
+          <div className="flex-1 overflow-y-auto">
+            {conversations.map(conversation => (
+              <div 
+                key={conversation.id}
+                onClick={() => loadConversation(conversation.id)}
+                className={`flex items-center justify-between p-3 rounded-md mb-2 cursor-pointer hover:bg-gray-700 ${currentConversationId === conversation.id ? 'bg-gray-700' : 'bg-gray-800'}`}
               >
-                <FaTimes size={12} />
-              </button>
-              <div className="flex justify-between items-start pr-4">
-                <div className="font-medium truncate flex-1">
-                  {session.title}
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <FiMessageSquare className="flex-shrink-0" />
+                  <span className="truncate">{conversation.title}</span>
                 </div>
-                <div className="text-xs text-gray-500 ml-2">
-                  {new Date(session.createdAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </div>
+                <button 
+                  onClick={(e) => deleteConversation(conversation.id, e)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <FiTrash2 size={16} />
+                </button>
               </div>
-              <div className="text-xs text-gray-500 mt-1 truncate">
-                {session.history.length > 0
-                  ? session.history[
-                      session.history.length - 1
-                    ].content.substring(0, 60) +
-                    (session.history[session.history.length - 1].content
-                      .length > 60
-                      ? "..."
-                      : "")
-                  : "New conversation"}
-              </div>
-              {session.history.some((msg) => msg.fileUrl) && (
-                <div className="mt-1 flex space-x-1">
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    Attachment
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="p-3 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white">
-              <FaUser size={12} />
-            </div>
-            <div className="text-sm font-medium">Dr. User</div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <header className="bg-white shadow-sm py-4 px-6 border-b border-gray-100 mt-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <button 
-                onClick={() => setShowSidebar(!showSidebar)}
-                className="md:hidden mr-3 p-2 rounded-lg hover:bg-gray-100"
-              >
-                <FaBars className="text-gray-600" />
-              </button>
-              <div className="flex items-center">
-                <div className="bg-blue-600 p-2 rounded-lg mr-3">
-                  <IoMdMedical className="text-white text-xl" />
-                </div>
-                <h1 className="text-xl font-bold text-gray-800">
-                  Dr. AI Medical Assistant
-                </h1>
-              </div>
-            </div>
-            <button
-              onClick={createNewSession}
-              className="md:hidden p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="New chat"
-            >
-              <FaPlus size={14} />
-            </button>
-          </div>
+        <header className="bg-gray-800 border-b border-gray-700 py-3 px-4 flex items-center">
+          <button 
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="md:hidden mr-4 text-gray-300 hover:text-white"
+          >
+            <FiMenu size={20} />
+          </button>
+          <h1 className="text-lg font-semibold">SpaceMed AI</h1>
         </header>
 
-        {/* Chat Container */}
-        <main className="flex-1 overflow-y-auto p-4 pb-24 bg-gray-50">
-          <div className="max-w-3xl mx-auto space-y-4">
-            {getCurrentChat()?.history.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center py-12 animate-fade-in">
-                <div className="bg-white p-5 rounded-2xl shadow-sm mb-6 transform transition-all hover:scale-105">
-                  <div className="bg-blue-100 p-4 rounded-full inline-block mb-4">
-                    <FaRobot className="text-3xl text-blue-600" />
-                  </div>
-                  <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-                    Medical Consultation
-                  </h2>
-                  <p className="text-gray-600 max-w-md">
-                    Upload medical images, reports, or describe symptoms for
-                    detailed analysis.
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-4 max-w-md">
-                  <button
-                    className="bg-white p-3 rounded-xl border border-gray-200 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700"
-                    onClick={() =>
-                      setMessage(
-                        "Can you analyze this X-ray for any abnormalities?"
-                      )
-                    }
-                  >
-                    Analyze X-ray
-                  </button>
-                  <button
-                    className="bg-white p-3 rounded-xl border border-gray-200 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700"
-                    onClick={() =>
-                      setMessage("Please review my blood test results")
-                    }
-                  >
-                    Blood test review
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {getCurrentChat()?.history.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                } animate-message-in`}
+        {/* Chat container */}
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-900">
+          <div className="max-w-3xl mx-auto">
+            {messages.map((message, index) => (
+              <div 
+                key={index} 
+                className={`mb-6 ${message.role === 'user' ? 'text-right' : 'text-left'}`}
               >
-                <div
-                  className={`flex max-w-[85%] ${
-                    msg.role === "user" ? "flex-row-reverse" : ""
-                  }`}
+                <div className={`inline-block max-w-full rounded-lg p-4 ${message.role === 'user' 
+                  ? 'bg-blue-600 text-white' 
+                  : message.role === 'system' 
+                    ? 'hidden'
+                    : 'bg-gray-800 text-gray-100'}`}
                 >
-                  <div
-                    className={`flex-shrink-0 mt-1 ${
-                      msg.role === "user" ? "ml-3" : "mr-3"
-                    }`}
-                  >
-                    <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center shadow-sm ${
-                        msg.role === "user"
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-green-600 border border-green-100"
-                      }`}
-                    >
-                      {msg.role === "user" ? (
-                        <FaUser size={14} />
-                      ) : (
-                        <FaStethoscope size={14} />
-                      )}
-                    </div>
-                  </div>
-                  <div
-                    className={`px-4 py-3 rounded-xl ${
-                      msg.role === "user"
-                        ? "bg-blue-600 text-white rounded-br-none shadow-md"
-                        : "bg-white text-gray-800 border border-gray-100 rounded-bl-none shadow-sm"
-                    }`}
-                  >
-                    <div className="font-medium text-xs mb-1 opacity-80">
-                      {msg.role === "user" ? "You" : "Dr. AI"}
-                    </div>
-                    {msg.fileUrl ? (
-                      <div className="mt-2">
-                        {msg.fileType.startsWith("image/") ? (
-                          <div>
-                            <img
-                              src={msg.fileUrl}
-                              alt="Medical image"
-                              className="rounded-lg max-w-full max-h-60 object-contain border border-gray-200 shadow-sm"
-                            />
-                            <div className="text-xs text-gray-500 mt-1">
-                              {msg.fileName}
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            className={`flex items-center p-4 rounded-lg ${
-                              msg.fileType === "application/pdf"
-                                ? "bg-red-50 border border-red-200"
-                                : "bg-blue-50 border border-blue-200"
-                            }`}
-                          >
-                            {msg.fileType === "application/pdf" ? (
-                              <FaFilePdf className="text-red-600 text-4xl mr-3" />
-                            ) : (
-                              <FaFileAlt className="text-blue-600 text-4xl mr-3" />
-                            )}
-                            <div>
-                              <div className="font-medium text-sm">
-                                {msg.fileName}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {msg.fileType}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        {msg.content !==
-                          getFileUploadMessage({ type: msg.fileType }) && (
-                          <p className="whitespace-pre-wrap text-sm mt-2">
-                            {msg.content}
-                          </p>
-                        )}
+                  {message.role === 'system' && message.imageUrl ? (
+                    <div className="mt-4">
+                      <h3 className="font-semibold mb-2">Medical Scan:</h3>
+                      <div className="relative group">
+                        <img 
+                          src={message.imageUrl} 
+                          alt="Medical scan" 
+                          className="max-w-full h-auto rounded-md border border-gray-700 max-h-64"
+                        />
+                        <a 
+                          href={message.imageUrl} 
+                          download 
+                          className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white p-2 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </a>
                       </div>
-                    ) : (
-                      <div
-                        className={`${
-                          msg.isAnalysis ? "medical-analysis" : ""
-                        }`}
-                      >
-                        {formatMedicalResponse(msg.content, msg.isAnalysis)}
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-line">{message.content}</p>
+                  )}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {new Date(message.timestamp).toLocaleTimeString()}
                 </div>
               </div>
             ))}
-
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="flex max-w-[85%]">
-                  <div className="flex-shrink-0 mr-3 mt-1">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center bg-white text-green-600 border border-green-100 shadow-sm">
-                      <FaStethoscope size={14} />
+              <div className="mb-6 text-left">
+                <div className="inline-block bg-gray-800 rounded-lg p-4">
+                  {uploadProgress > 0 ? (
+                    <div>
+                      <p>Uploading scan: {uploadProgress}%</p>
+                      <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+                        <div 
+                          className="bg-blue-500 h-2 rounded-full" 
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="px-4 py-3 bg-white text-gray-800 border border-gray-100 rounded-xl rounded-bl-none shadow-sm">
-                    <div className="font-medium text-xs mb-1 opacity-80">
-                      Dr. AI is analyzing
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce"></div>
+                      <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                     </div>
-                    <div className="flex space-x-2">
-                      <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
-                        style={{ animationDelay: "0.4s" }}
-                      ></div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
-        </main>
+        </div>
 
-        {/* Input Area */}
-        <footer className="bg-white border-t border-gray-200 py-4 px-6 shadow-lg">
+        {/* Input area */}
+        <div className="bg-gray-800 border-t border-gray-700 p-4">
           <div className="max-w-3xl mx-auto">
-            {file && (
-              <div className="relative mb-3 bg-gray-50 rounded-xl p-3 border border-gray-200 shadow-inner">
-                {renderFilePreview()}
+            <form onSubmit={handleSubmit} className="relative">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Enter your space medicine query (Shift+Enter for new line)..."
+                className="w-full rounded-lg border border-gray-700 py-3 px-4 pr-16 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 text-white resize-none"
+                rows={Math.min(5, Math.max(1, input.split('\n').length))}
+              />
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                accept="image/*" 
+                onChange={handleXrayUpload} 
+                className="hidden" 
+              />
+              <div className="absolute right-2 bottom-2 flex gap-2">
                 <button
                   type="button"
-                  onClick={removeFile}
-                  className="p-2 rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors absolute top-2 right-2 shadow-sm"
-                  title="Remove file"
+                  onClick={triggerFileInput}
+                  className="text-gray-400 hover:text-blue-400 p-1"
+                  title="Upload medical scan"
                 >
-                  <FaTimes size={12} />
+                  <FiImage size={20} />
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading || !input.trim()}
+                  className="text-blue-400 hover:text-blue-300 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Send message"
+                >
+                  <FiSend size={20} />
                 </button>
               </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="relative">
-              <div className="flex items-center bg-white rounded-xl border border-gray-300 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all shadow-sm hover:shadow-md">
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Describe symptoms or ask about medical reports..."
-                  disabled={isLoading}
-                  className="flex-1 py-3 px-4 bg-transparent outline-none text-sm rounded-l-xl"
-                />
-                <div className="flex items-center pr-2 space-x-1">
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowFileTypeMenu(!showFileTypeMenu)}
-                      className={`p-2 rounded-lg cursor-pointer transition-all ${
-                        isLoading
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-gray-600 hover:text-blue-600 hover:bg-blue-50"
-                      }`}
-                      title="Upload medical file"
-                      disabled={isLoading}
-                    >
-                      <FaImage size={18} />
-                    </button>
-
-                    {showFileTypeMenu && (
-                      <div className="absolute bottom-12 right-0 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-48">
-                        <label
-                          className="flex items-center px-4 py-2 hover:bg-blue-50 cursor-pointer"
-                          title="Upload medical image (X-ray, MRI, etc.)"
-                        >
-                          <FaImage className="mr-2 text-blue-600" />
-                          <span>Medical Image</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                            className="hidden"
-                            ref={fileInputRef}
-                          />
-                        </label>
-                        <label
-                          className="flex items-center px-4 py-2 hover:bg-blue-50 cursor-pointer"
-                          title="Upload medical report (PDF)"
-                        >
-                          <FaFilePdf className="mr-2 text-red-600" />
-                          <span>Medical Report</span>
-                          <input
-                            type="file"
-                            accept="application/pdf"
-                            onChange={handleFileChange}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={isLoading || (!message && !file)}
-                    className={`p-2 rounded-lg transition-all ${
-                      isLoading || (!message && !file)
-                        ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                        : "text-white bg-blue-600 hover:bg-blue-700 shadow-md"
-                    }`}
-                    title="Send message"
-                  >
-                    <FaPaperPlane size={18} />
-                  </button>
-                </div>
-              </div>
             </form>
-
-            <div className="text-center mt-3 text-xs text-gray-500">
-              Dr. AI provides preliminary analysis only. For medical
-              emergencies, call your local emergency number.
-            </div>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              SpaceMed AI may produce information about space medicine conditions.
+            </p>
           </div>
-        </footer>
+        </div>
       </div>
     </div>
   );
 }
+
+export default DoctorChat;
