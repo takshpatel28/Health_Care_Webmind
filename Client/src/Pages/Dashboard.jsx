@@ -33,6 +33,8 @@ const Dashboard = () => {
     cyan: '#06B6D4'
   };
 
+  console.log(allDoctors)
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -81,7 +83,7 @@ const Dashboard = () => {
     if (window.confirm("Are you sure you want to delete this doctor?")) {
       try {
         setOperationLoading({ ...operationLoading, delete: doctorId });
-        
+
         // Delete from Supabase
         const { error } = await supabase
           .from('doctors')
@@ -92,7 +94,7 @@ const Dashboard = () => {
 
         // Refresh the doctors list
         await fetchDoctors();
-        
+
         // If this was the current user, log them out
         if (doctorId === userInfo?.id) {
           await supabase.auth.signOut();
@@ -143,6 +145,41 @@ const Dashboard = () => {
         backgroundColor: [colors.red, colors.blue, colors.yellow],
         borderColor: '#ffffff',
         borderWidth: 2
+      }]
+    };
+  };
+
+  const getSpecializationData = () => {
+    // Assuming you have an array of doctors with their specializations
+    // Example data structure:
+    const doctors = allDoctors;
+
+    // Count doctors by specialization
+    const specializationCount = doctors.reduce((acc, doctor) => {
+      acc[doctor.specialization] = (acc[doctor.specialization] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Prepare data for chart
+    const labels = Object.keys(specializationCount);
+    const data = Object.values(specializationCount);
+
+    // Generate distinct colors for each specialization
+    const backgroundColors = labels.map((_, index) => {
+      const hue = (index * 360 / labels.length) % 360;
+      return `hsl(${hue}, 70%, 60%)`;
+    });
+
+    return {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: backgroundColors,
+        hoverBackgroundColor: backgroundColors.map(color =>
+          color.replace('60%)', '70%)') // Make hover slightly lighter
+        ),
+        borderWidth: 1,
+        hoverBorderColor: '#fff',
       }]
     };
   };
@@ -475,110 +512,121 @@ const Dashboard = () => {
           ) : (
             <>
               <div className="rounded-xl bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6">
-                <h3 className="mb-3 text-lg font-semibold text-gray-800 sm:mb-4">Department Activity</h3>
-                <div className="h-64 sm:h-80">
-                  <Line
-                    data={getDepartmentActivityData()}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          position: window.innerWidth < 640 ? 'bottom' : 'top',
-                          labels: {
-                            font: {
-                              size: window.innerWidth < 640 ? 10 : 12,
-                              weight: 'bold'
+                <h3 className="mb-3 text-lg font-semibold text-gray-800 sm:mb-4">Doctors by Specialization</h3>
+                <div className="relative h-64 sm:h-80">
+                  <div className="absolute inset-0 overflow-x-auto">
+                    <div className="min-w-[500px] h-full"> {/* Adjust min-width as needed */}
+                      <Doughnut
+                        data={getSpecializationData()} // You'll need to create this function similar to getDepartmentData()
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          cutout: '70%', // Adjust the size of the center hole
+                          plugins: {
+                            legend: {
+                              position: window.innerWidth < 640 ? 'bottom' : 'right',
+                              labels: {
+                                font: {
+                                  size: window.innerWidth < 640 ? 10 : 12,
+                                  weight: 'bold'
+                                },
+                                padding: 20,
+                                boxWidth: 12
+                              }
+                            },
+                            tooltip: {
+                              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                              titleFont: { size: 14, weight: 'bold' },
+                              bodyFont: { size: 12 },
+                              padding: 12,
+                              cornerRadius: 8,
+                              displayColors: true,
+                              callbacks: {
+                                label: (context) => {
+                                  const label = context.label || '';
+                                  const value = context.raw || 0;
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = Math.round((value / total) * 100);
+                                  return `${label}: ${value} (${percentage}%)`;
+                                }
+                              }
                             }
-                          }
-                        },
-                        tooltip: {
-                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                          titleFont: { size: 14, weight: 'bold' },
-                          bodyFont: { size: 12 },
-                          padding: 12,
-                          cornerRadius: 8,
-                          displayColors: true
-                        }
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
                           },
-                          ticks: {
-                            font: {
-                              weight: 'bold'
+                          elements: {
+                            arc: {
+                              borderWidth: 0, // Remove borders between segments
+                              borderRadius: 4 // Add rounded corners to segments
                             }
                           }
-                        },
-                        x: {
-                          grid: {
-                            display: false
-                          },
-                          ticks: {
-                            font: {
-                              weight: 'bold'
-                            }
-                          }
-                        }
-                      }
-                    }}
-                  />
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div className="rounded-xl bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6">
-                <h3 className="mb-3 text-lg font-semibold text-gray-800 sm:mb-4">Doctor Performance</h3>
-                <div className="h-64 sm:h-80">
-                  <Bar
-                    data={getDoctorPerformanceData()}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          display: false
-                        },
-                        tooltip: {
-                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                          titleFont: { size: 14, weight: 'bold' },
-                          bodyFont: { size: 12 },
-                          padding: 12,
-                          cornerRadius: 8,
-                          displayColors: true,
-                          callbacks: {
-                            label: (context) => `${context.label}: ${context.raw}% score`
-                          }
-                        }
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          max: 100,
-                          grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
+                <h3 className="mb-3 text-lg font-semibold text-gray-800 sm:mb-4">
+                  Doctors by Department
+                </h3>
+
+                <div className="relative h-64 sm:h-80">
+                  <div className="absolute inset-0 overflow-x-auto">
+                    <div className="min-w-[500px] h-full">
+                      <Bar
+                        data={getDepartmentData()}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: window.innerWidth < 640 ? 'bottom' : 'top',
+                              labels: {
+                                font: {
+                                  size: window.innerWidth < 640 ? 10 : 12,
+                                  weight: 'bold'
+                                }
+                              }
+                            },
+                            tooltip: {
+                              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                              titleFont: { size: 14, weight: 'bold' },
+                              bodyFont: { size: 12 },
+                              padding: 12,
+                              cornerRadius: 8,
+                              displayColors: true,
+                              callbacks: {
+                                label: (context) => `${context.dataset.label}: ${context.raw}`
+                              }
+                            }
                           },
-                          ticks: {
-                            font: {
-                              weight: 'bold'
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                              },
+                              ticks: {
+                                font: {
+                                  weight: 'bold'
+                                }
+                              }
+                            },
+                            x: {
+                              grid: {
+                                display: false
+                              },
+                              ticks: {
+                                font: {
+                                  weight: 'bold'
+                                }
+                              }
                             }
                           }
-                        },
-                        x: {
-                          grid: {
-                            display: false
-                          },
-                          ticks: {
-                            font: {
-                              weight: 'bold'
-                            }
-                          }
-                        }
-                      }
-                    }}
-                  />
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </>
@@ -653,11 +701,10 @@ const Dashboard = () => {
                     <button
                       onClick={() => handleDelete(doctor.id)}
                       disabled={operationLoading.delete === doctor.id}
-                      className={`rounded-lg px-3 py-1 text-center text-xs font-medium transition-all hover:shadow-sm sm:text-sm ${
-                        operationLoading.delete === doctor.id
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-red-50 text-red-600 hover:bg-red-100'
-                      }`}
+                      className={`rounded-lg px-3 py-1 text-center text-xs font-medium transition-all hover:shadow-sm sm:text-sm ${operationLoading.delete === doctor.id
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-red-50 text-red-600 hover:bg-red-100'
+                        }`}
                     >
                       {operationLoading.delete === doctor.id ? (
                         <span className="flex items-center justify-center">
@@ -680,8 +727,8 @@ const Dashboard = () => {
 
         {/* Overview section - responsive padding and button layout */}
         <section className={`relative overflow-hidden rounded-xl p-6 text-center text-white shadow-lg sm:p-8 ${userInfo?.role === "HOD"
-            ? "bg-gradient-to-r from-blue-600 to-cyan-500"
-            : "bg-gradient-to-r from-indigo-600 to-purple-500"
+          ? "bg-gradient-to-r from-blue-600 to-cyan-500"
+          : "bg-gradient-to-r from-indigo-600 to-purple-500"
           }`}>
           <div className="absolute -right-10 -top-10 h-20 w-20 rounded-full bg-white bg-opacity-10 sm:-right-20 sm:-top-20 sm:h-40 sm:w-40"></div>
           <div className="absolute -bottom-10 -left-10 h-20 w-20 rounded-full bg-white bg-opacity-10 sm:-bottom-20 sm:-left-20 sm:h-40 sm:w-40"></div>

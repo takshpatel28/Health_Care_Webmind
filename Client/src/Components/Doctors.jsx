@@ -208,7 +208,7 @@ const Doctors = () => {
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <Sidebar />
-      
+
       {/* Main Content */}
       <div className="flex-1 p-2 md:p-6 transition-all duration-300 mt-5">
         {/* Header */}
@@ -216,7 +216,7 @@ const Doctors = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-0">
             Our <span className="text-blue-600">Medical</span> Team
           </h1>
-          
+
           <div className="relative w-full md:w-64">
             <input
               type="text"
@@ -247,13 +247,13 @@ const Doctors = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
             {filteredDoctors.map((doctor) => (
               <div key={doctor.id} className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-300 relative"
-              style={{ minWidth: '253px' }}>
+                style={{ minWidth: '253px' }}>
                 {operationLoading.delete === doctor.id && (
                   <div className="absolute inset-0 backdrop-blur-sm bg-white/80 flex items-center justify-center z-10 rounded-xl">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                   </div>
                 )}
-                
+
                 <div className="relative h-40 md:h-48">
                   <img
                     className="w-full h-full object-cover"
@@ -262,25 +262,25 @@ const Doctors = () => {
                   />
                   <div className="absolute bottom-2 right-2 h-4 w-4 md:h-5 md:w-5 bg-green-500 rounded-full border-2 md:border-3 border-white shadow-sm"></div>
                 </div>
-                
+
                 <div className="p-4">
                   <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate">{doctor.fullname}</h3>
                   <p className="text-blue-500 font-semibold text-sm mb-1 md:mb-2 truncate">{doctor.specialization}</p>
-                  
+
                   <div className="flex items-center space-x-1 md:space-x-2 text-gray-600 text-xs md:text-sm mb-1">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <span>{doctor.experienceyears} Years Exp</span>
                   </div>
-                  
+
                   <div className="flex items-center space-x-1 md:space-x-2 text-gray-600 text-xs md:text-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                     </svg>
                     <span className="truncate">{doctor.phonenumber}</span>
                   </div>
-                  
+
                   <div className="flex space-x-2 mt-3 md:mt-4">
                     <button
                       onClick={() => handleEditClick(doctor)}
@@ -297,7 +297,7 @@ const Doctors = () => {
                       </button>
                     )}
                   </div>
-                  
+
                   <button
                     onClick={() => handleViewProfile(doctor)}
                     className="mt-2 md:mt-3 w-full border border-blue-600 text-blue-600 font-semibold py-1 md:py-2 text-xs md:text-sm rounded-lg hover:bg-blue-600 hover:text-white transition-all"
