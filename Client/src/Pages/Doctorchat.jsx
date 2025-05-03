@@ -1,708 +1,923 @@
-import { useState, useRef, useEffect } from "react";
-import axios from "axios";
-import {
-  FaImage,
-  FaPaperPlane,
-  FaTimes,
-  FaRobot,
-  FaUser,
-  FaPlus,
-  FaStethoscope,
-  FaHistory,
-  FaFilePdf,
-  FaFileAlt,
-  FaBars,
-} from "react-icons/fa";
-import { IoMdMedical } from "react-icons/io";
-import "../index.css";
 
-// Key for localStorage
-const CHAT_SESSIONS_KEY = "doctor_chat_sessions";
 
-export default function DoctorChat() {
-  const [message, setMessage] = useState("");
-  const [file, setFile] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [chatSessions, setChatSessions] = useState([]);
-  const [currentSessionId, setCurrentSessionId] = useState(null);
-  const [showFileTypeMenu, setShowFileTypeMenu] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
+import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { FiSend, FiImage, FiMenu, FiX } from 'react-icons/fi';
+import { BsRobot, BsPerson, BsLightbulb, BsThreeDots } from 'react-icons/bs';
+
+function DoctorChat() {
+  const [message, setMessage] = useState('');
+  const [image, setImage] = useState(null);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [isSending, setIsSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
+  const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
-  const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
 
-  // Check screen size on load and resize
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setShowSidebar(false);
-      } else {
-        setShowSidebar(true);
+    // Load chat history when component mounts
+    const loadChatHistory = async () => {
+      try {
+        const res = await axios.get('https://student-webmind.onrender.com/history');
+        // Only set chat history if there is data available
+        if (res.data.history && res.data.history.length > 0) {
+          setChatHistory(res.data.history);
+        }
+      } catch (error) {
+        console.error('Error loading chat history:', error);
       }
     };
-
-    // Set initial state
-    handleResize();
-
-    // Add event listener
-    window.addEventListener('resize', handleResize);
-
-    // Clean up
-    return () => window.removeEventListener('resize', handleResize);
+    
+    loadChatHistory();
   }, []);
 
-  // Load chat sessions from localStorage on component mount
   useEffect(() => {
-    const savedSessions = localStorage.getItem(CHAT_SESSIONS_KEY);
-    if (savedSessions) {
-      const parsedSessions = JSON.parse(savedSessions);
-      setChatSessions(parsedSessions);
-      if (parsedSessions.length > 0) {
-        setCurrentSessionId(parsedSessions[parsedSessions.length - 1].id);
-      } else {
-        createNewSession();
-      }
-    } else {
-      createNewSession();
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatHistory]);
+
+  // Auto-resize textarea as user types
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '24px';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
-  }, []);
+  }, [message]);
 
-  // Save chat sessions to localStorage whenever they change
-  useEffect(() => {
-    if (chatSessions.length > 0) {
-      localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(chatSessions));
-    }
-  }, [chatSessions]);
+  const sendMessage = async () => {
+    if (!message.trim() && !image) return;
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [currentSessionId, chatSessions]);
-
-  const getCurrentChat = () => {
-    return (
-      chatSessions.find((session) => session.id === currentSessionId) ||
-      chatSessions[chatSessions.length - 1]
-    );
-  };
-
-  const createNewSession = () => {
-    const newSession = {
-      id: Date.now().toString(),
-      title: `Chat ${chatSessions.length + 1}`,
-      history: [],
-      createdAt: new Date().toISOString(),
+    // Add user message to chat immediately for better UX
+    const userMessage = {
+      role: 'user',
+      content: message,
+      image: image ? URL.createObjectURL(image) : null
     };
-    const updatedSessions = [...chatSessions, newSession];
-    setChatSessions(updatedSessions);
-    setCurrentSessionId(newSession.id);
-    return newSession;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!message && !file) return;
-
-    setIsLoading(true);
-    const currentChat = getCurrentChat();
+    
+    setChatHistory(prev => [...prev, userMessage]);
+    setIsSending(true);
+    setIsTyping(true);
+    setMessage('');
+    
+    const formData = new FormData();
+    formData.append('message', message);
+    if (image) {
+      formData.append('image', image);
+    }
 
     try {
-      const formData = new FormData();
-      formData.append("message", message);
-      if (file) {
-        formData.append("file", file);
-      }
-      formData.append("chatHistory", JSON.stringify(currentChat.history));
-
-      // Add the user message immediately
-      const userMessage = {
-        role: "user",
-        content: message || getFileUploadMessage(file),
-        ...(file && {
-          fileUrl: URL.createObjectURL(file),
-          fileType: file.type,
-          fileName: file.name,
-        }),
-      };
-
-      // Optimistic update
-      const updatedSessionsWithUserMessage = chatSessions.map((session) => {
-        if (session.id === currentSessionId) {
-          return {
-            ...session,
-            history: [...session.history, userMessage],
-            title:
-              session.history.length === 0
-                ? (message || getFileUploadMessage(file)).substring(0, 20) +
-                  (message?.length > 20 ? "..." : "")
-                : session.title,
-          };
+      const res = await axios.post('https://student-webmind.onrender.com/chat', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
         }
-        return session;
       });
-      setChatSessions(updatedSessionsWithUserMessage);
-
-      const response = await axios.post(
-        "https://health-care-webmind.onrender.com/api/chat",
-        // 'http://localhost:8080/api/chat',
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      // Update with assistant's response
-      const updatedSessions = updatedSessionsWithUserMessage.map((session) => {
-        if (session.id === currentSessionId) {
-          return {
-            ...session,
-            history: [
-              ...session.history,
-              {
-                role: "assistant",
-                content: response.data.response,
-                isAnalysis: !!file, // Mark as analysis response if file was uploaded
-              },
-            ],
-          };
-        }
-        return session;
-      });
-
-      setChatSessions(updatedSessions);
-      setMessage("");
-      setFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      setChatSessions(chatSessions);
-      alert(
-        error.response?.data?.error ||
-          "Error sending message. Please try again."
-      );
+      setChatHistory(res.data.history);
+      setImage(null);
+    } catch (err) {
+      console.error('Error sending message:', err);
+      // Show error in chat
+      setChatHistory(prev => [...prev.slice(0, -1), {
+        role: 'assistant',
+        content: 'Sorry, I encountered an error processing your request. Please try again.'
+      }]);
     } finally {
-      setIsLoading(false);
+      setIsSending(false);
+      setIsTyping(false);
     }
   };
 
-  const getFileUploadMessage = (file) => {
-    if (!file) return "";
-    if (file.type.startsWith("image/"))
-      return "Uploaded medical image for analysis";
-    if (file.type === "application/pdf")
-      return "Uploaded medical report for analysis";
-    return "Uploaded document for analysis";
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setShowFileTypeMenu(false);
-      // Auto-focus message input after file selection
-      setTimeout(() => {
-        const input = document.querySelector('input[type="text"]');
-        if (input) input.focus();
-      }, 100);
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
-  const removeFile = () => {
-    setFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+  const handleImageClick = () => {
+    fileInputRef.current.click();
   };
 
-  const switchSession = (sessionId) => {
-    setCurrentSessionId(sessionId);
-    // On mobile, close sidebar after selecting a chat
-    if (window.innerWidth < 768) {
-      setShowSidebar(false);
-    }
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
-  const deleteSession = (sessionId, e) => {
-    e.stopPropagation(); // Prevent triggering the switchSession
-    const updatedSessions = chatSessions.filter(session => session.id !== sessionId);
-    setChatSessions(updatedSessions);
-    
-    // If we're deleting the current session, switch to another one
-    if (sessionId === currentSessionId) {
-      if (updatedSessions.length > 0) {
-        setCurrentSessionId(updatedSessions[updatedSessions.length - 1].id);
-      } else {
-        createNewSession();
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
+
+  const clearChat = async () => {
+    if (window.confirm('Are you sure you want to clear the chat history?')) {
+      try {
+        setIsSending(true);
+        // Clear chat history on server
+        await axios.post('http://localhost:5000/clear-history');
+        // Clear chat history on client
+        setChatHistory([]);
+      } catch (err) {
+        console.error('Error clearing chat history:', err);
+        alert('Failed to clear chat history. Please try again.');
+      } finally {
+        setIsSending(false);
       }
     }
-  };
-
-  const renderFilePreview = () => {
-    if (!file) return null;
-
-    if (file.type.startsWith("image/")) {
-      return (
-        <div className="flex items-center bg-blue-50 p-3 rounded-lg border border-blue-200">
-          <img
-            src={URL.createObjectURL(file)}
-            alt="Preview"
-            className="h-24 rounded-lg object-cover border border-gray-200 shadow-sm"
-          />
-          <div className="ml-3">
-            <div className="text-sm font-medium text-gray-800">{file.name}</div>
-            <div className="text-xs text-gray-500">
-              {Math.round(file.size / 1024)} KB •{" "}
-              {file.type.split("/")[1].toUpperCase()}
-            </div>
-            <div className="mt-1 text-xs text-blue-600 font-medium">
-              Ready for medical analysis
-            </div>
-          </div>
-        </div>
-      );
-    } else if (file.type === "application/pdf") {
-      return (
-        <div className="flex items-center bg-red-50 p-3 rounded-lg border border-red-200">
-          <div className="flex items-center justify-center h-24 w-24 bg-white rounded-lg border border-red-200 shadow-sm">
-            <FaFilePdf className="text-red-600 text-4xl" />
-          </div>
-          <div className="ml-3">
-            <div className="text-sm font-medium text-gray-800">{file.name}</div>
-            <div className="text-xs text-gray-500">
-              {Math.round(file.size / 1024)} KB • PDF
-            </div>
-            <div className="mt-1 text-xs text-red-600 font-medium">
-              Ready for medical report analysis
-            </div>
-          </div>
-        </div>
-      );
-    }
-  };
-
-  // Format assistant's response with better readability for medical analysis
-  const formatMedicalResponse = (content, isAnalysis = false) => {
-    if (!isAnalysis) return content;
-
-    // Add section headers and formatting for analysis responses
-    const sections = content
-      .split("\n\n")
-      .filter((part) => part.trim().length > 0);
-
-    return sections.map((section, index) => {
-      if (section.startsWith("**")) {
-        // Header section
-        return (
-          <div key={index} className="mb-3">
-            <h3 className="font-bold text-blue-700 text-sm mb-1">
-              {section.replace(/\*\*/g, "")}
-            </h3>
-          </div>
-        );
-      } else if (section.startsWith("- ")) {
-        // Bullet points
-        return (
-          <ul key={index} className="list-disc pl-5 space-y-1 mb-3">
-            {section.split("\n").map((item, i) => (
-              <li key={i} className="text-sm">
-                {item.replace("- ", "")}
-              </li>
-            ))}
-          </ul>
-        );
-      } else {
-        // Regular paragraph
-        return (
-          <p key={index} className="whitespace-pre-wrap text-sm mb-3">
-            {section}
-          </p>
-        );
-      }
-    });
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-      {/* Sidebar - Chat History */}
-      <div className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-20 w-64 h-full bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out`}>
-        <div className="p-4 border-b border-gray-200 mt-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold text-lg">Medical Consultations</h2>
-            <button
-              onClick={createNewSession}
-              className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="New chat"
-            >
-              <FaPlus size={14} />
-            </button>
-          </div>
-          <div className="mt-2 relative">
-            <input
-              type="text"
-              placeholder="Search chats..."
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+    <div className={`chat-app ${darkMode ? 'dark-mode' : 'light-mode'}`}>
+      {/* Sidebar */}
+      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-header">
+          <h3>Student WebMind</h3>
+          <button className="close-sidebar" onClick={toggleSidebar}>
+            <FiX />
+          </button>
+        </div>
+        
+        <div className="sidebar-content">
+          <button className="new-chat" onClick={clearChat}>
+            <span>+ New chat</span>
+          </button>
+          
+          <div className="chat-history-list">
+            <div className="history-date">Today</div>
+            <div className="history-item active">
+              <BsLightbulb />
+              <span>Current Chat</span>
+            </div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          {chatSessions.map((session) => (
-            <div
-              key={session.id}
-              onClick={() => switchSession(session.id)}
-              className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors relative group ${
-                currentSessionId === session.id
-                  ? "bg-blue-100 border-l-4 border-l-blue-600"
-                  : ""
-              }`}
-            >
-              <button
-                onClick={(e) => deleteSession(session.id, e)}
-                className="absolute right-2 top-2 p-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
-                title="Delete chat"
-              >
-                <FaTimes size={12} />
-              </button>
-              <div className="flex justify-between items-start pr-4">
-                <div className="font-medium truncate flex-1">
-                  {session.title}
-                </div>
-                <div className="text-xs text-gray-500 ml-2">
-                  {new Date(session.createdAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </div>
-              </div>
-              <div className="text-xs text-gray-500 mt-1 truncate">
-                {session.history.length > 0
-                  ? session.history[
-                      session.history.length - 1
-                    ].content.substring(0, 60) +
-                    (session.history[session.history.length - 1].content
-                      .length > 60
-                      ? "..."
-                      : "")
-                  : "New conversation"}
-              </div>
-              {session.history.some((msg) => msg.fileUrl) && (
-                <div className="mt-1 flex space-x-1">
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    Attachment
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="p-3 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white">
-              <FaUser size={12} />
-            </div>
-            <div className="text-sm font-medium">Dr. User</div>
-          </div>
+        
+        <div className="sidebar-footer">
+          <button className="theme-toggle" onClick={toggleDarkMode}>
+            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          </button>
         </div>
       </div>
-
+      
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white shadow-sm py-4 px-6 border-b border-gray-100 mt-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <button 
-                onClick={() => setShowSidebar(!showSidebar)}
-                className="md:hidden mr-3 p-2 rounded-lg hover:bg-gray-100"
-              >
-                <FaBars className="text-gray-600" />
-              </button>
-              <div className="flex items-center">
-                <div className="bg-blue-600 p-2 rounded-lg mr-3">
-                  <IoMdMedical className="text-white text-xl" />
+      <div className="chat-main">
+        {/* Mobile Header */}
+        <div className="mobile-header">
+          <button className="menu-button" onClick={toggleSidebar}>
+            <FiMenu />
+          </button>
+          <h2>Student WebMind</h2>
+        </div>
+        
+        {/* Chat Messages */}
+        <div className="chat-messages">
+          {chatHistory.length === 0 ? (
+            <div className="welcome-screen">
+              <div className="welcome-icon">
+                <BsRobot />
+              </div>
+              <h1>Student WebMind AI</h1>
+              <p>Your AI assistant for learning and image analysis</p>
+              <div className="example-prompts">
+                <div className="example-prompt">
+                  <BsLightbulb />
+                  <span>"Explain the concept of photosynthesis"</span>
                 </div>
-                <h1 className="text-xl font-bold text-gray-800">
-                  Dr. AI Medical Assistant
-                </h1>
+                <div className="example-prompt">
+                  <BsLightbulb />
+                  <span>"Help me solve this math problem"</span>
+                </div>
+                <div className="example-prompt">
+                  <BsLightbulb />
+                  <span>"Upload an image for analysis"</span>
+                </div>
               </div>
             </div>
-            <button
-              onClick={createNewSession}
-              className="md:hidden p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="New chat"
-            >
-              <FaPlus size={14} />
-            </button>
-          </div>
-        </header>
-
-        {/* Chat Container */}
-        <main className="flex-1 overflow-y-auto p-4 pb-24 bg-gray-50">
-          <div className="max-w-3xl mx-auto space-y-4">
-            {getCurrentChat()?.history.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center py-12 animate-fade-in">
-                <div className="bg-white p-5 rounded-2xl shadow-sm mb-6 transform transition-all hover:scale-105">
-                  <div className="bg-blue-100 p-4 rounded-full inline-block mb-4">
-                    <FaRobot className="text-3xl text-blue-600" />
-                  </div>
-                  <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-                    Medical Consultation
-                  </h2>
-                  <p className="text-gray-600 max-w-md">
-                    Upload medical images, reports, or describe symptoms for
-                    detailed analysis.
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-4 max-w-md">
-                  <button
-                    className="bg-white p-3 rounded-xl border border-gray-200 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700"
-                    onClick={() =>
-                      setMessage(
-                        "Can you analyze this X-ray for any abnormalities?"
-                      )
-                    }
-                  >
-                    Analyze X-ray
-                  </button>
-                  <button
-                    className="bg-white p-3 rounded-xl border border-gray-200 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700"
-                    onClick={() =>
-                      setMessage("Please review my blood test results")
-                    }
-                  >
-                    Blood test review
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {getCurrentChat()?.history.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                } animate-message-in`}
-              >
-                <div
-                  className={`flex max-w-[85%] ${
-                    msg.role === "user" ? "flex-row-reverse" : ""
-                  }`}
+          ) : (
+            <>
+              {chatHistory.map((msg, index) => (
+                <div 
+                  key={index} 
+                  className={`message ${msg.role === 'user' ? 'user-message' : 'assistant-message'}`}
                 >
-                  <div
-                    className={`flex-shrink-0 mt-1 ${
-                      msg.role === "user" ? "ml-3" : "mr-3"
-                    }`}
-                  >
-                    <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center shadow-sm ${
-                        msg.role === "user"
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-green-600 border border-green-100"
-                      }`}
-                    >
-                      {msg.role === "user" ? (
-                        <FaUser size={14} />
-                      ) : (
-                        <FaStethoscope size={14} />
+                  <div className="message-avatar">
+                    {msg.role === 'user' ? (
+                      <div className="user-avatar">
+                        <BsPerson />
+                      </div>
+                    ) : (
+                      <div className="assistant-avatar">
+                        <BsRobot />
+                      </div>
+                    )}
+                  </div>
+                  <div className="message-content">
+                    <div className="message-header">
+                      <strong>{msg.role === 'user' ? 'You' : 'AI Assistant'}</strong>
+                    </div>
+                    <div className="message-body">
+                      {msg.content.split('\n').map((paragraph, i) => (
+                        <p key={i}>{paragraph}</p>
+                      ))}
+                      {msg.image && (
+                        <div className="image-section">
+                          <div className="image-preview">
+                            <img src={msg.image} alt="uploaded content" />
+                          </div>
+                          {msg.imageAnalysis && (
+                            <div className="image-analysis">
+                              <h4>Image Analysis:</h4>
+                              <p>{msg.imageAnalysis}</p>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
-                  <div
-                    className={`px-4 py-3 rounded-xl ${
-                      msg.role === "user"
-                        ? "bg-blue-600 text-white rounded-br-none shadow-md"
-                        : "bg-white text-gray-800 border border-gray-100 rounded-bl-none shadow-sm"
-                    }`}
-                  >
-                    <div className="font-medium text-xs mb-1 opacity-80">
-                      {msg.role === "user" ? "You" : "Dr. AI"}
-                    </div>
-                    {msg.fileUrl ? (
-                      <div className="mt-2">
-                        {msg.fileType.startsWith("image/") ? (
-                          <div>
-                            <img
-                              src={msg.fileUrl}
-                              alt="Medical image"
-                              className="rounded-lg max-w-full max-h-60 object-contain border border-gray-200 shadow-sm"
-                            />
-                            <div className="text-xs text-gray-500 mt-1">
-                              {msg.fileName}
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            className={`flex items-center p-4 rounded-lg ${
-                              msg.fileType === "application/pdf"
-                                ? "bg-red-50 border border-red-200"
-                                : "bg-blue-50 border border-blue-200"
-                            }`}
-                          >
-                            {msg.fileType === "application/pdf" ? (
-                              <FaFilePdf className="text-red-600 text-4xl mr-3" />
-                            ) : (
-                              <FaFileAlt className="text-blue-600 text-4xl mr-3" />
-                            )}
-                            <div>
-                              <div className="font-medium text-sm">
-                                {msg.fileName}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {msg.fileType}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        {msg.content !==
-                          getFileUploadMessage({ type: msg.fileType }) && (
-                          <p className="whitespace-pre-wrap text-sm mt-2">
-                            {msg.content}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div
-                        className={`${
-                          msg.isAnalysis ? "medical-analysis" : ""
-                        }`}
-                      >
-                        {formatMedicalResponse(msg.content, msg.isAnalysis)}
-                      </div>
-                    )}
-                  </div>
                 </div>
-              </div>
-            ))}
-
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="flex max-w-[85%]">
-                  <div className="flex-shrink-0 mr-3 mt-1">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center bg-white text-green-600 border border-green-100 shadow-sm">
-                      <FaStethoscope size={14} />
+              ))}
+              
+              {/* Typing indicator */}
+              {isTyping && (
+                <div className="message assistant-message">
+                  <div className="message-avatar">
+                    <div className="assistant-avatar">
+                      <BsRobot />
                     </div>
                   </div>
-                  <div className="px-4 py-3 bg-white text-gray-800 border border-gray-100 rounded-xl rounded-bl-none shadow-sm">
-                    <div className="font-medium text-xs mb-1 opacity-80">
-                      Dr. AI is analyzing
+                  <div className="message-content">
+                    <div className="message-header">
+                      <strong>AI Assistant</strong>
                     </div>
-                    <div className="flex space-x-2">
-                      <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
-                        style={{ animationDelay: "0.4s" }}
-                      ></div>
+                    <div className="message-body">
+                      <div className="typing-indicator">
+                        <BsThreeDots />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </main>
+              )}
+            </>
+          )}
+          <div ref={chatEndRef} />
+        </div>
 
-        {/* Input Area */}
-        <footer className="bg-white border-t border-gray-200 py-4 px-6 shadow-lg">
-          <div className="max-w-3xl mx-auto">
-            {file && (
-              <div className="relative mb-3 bg-gray-50 rounded-xl p-3 border border-gray-200 shadow-inner">
-                {renderFilePreview()}
-                <button
-                  type="button"
-                  onClick={removeFile}
-                  className="p-2 rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors absolute top-2 right-2 shadow-sm"
-                  title="Remove file"
-                >
-                  <FaTimes size={12} />
-                </button>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="relative">
-              <div className="flex items-center bg-white rounded-xl border border-gray-300 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all shadow-sm hover:shadow-md">
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Describe symptoms or ask about medical reports..."
-                  disabled={isLoading}
-                  className="flex-1 py-3 px-4 bg-transparent outline-none text-sm rounded-l-xl"
-                />
-                <div className="flex items-center pr-2 space-x-1">
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowFileTypeMenu(!showFileTypeMenu)}
-                      className={`p-2 rounded-lg cursor-pointer transition-all ${
-                        isLoading
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-gray-600 hover:text-blue-600 hover:bg-blue-50"
-                      }`}
-                      title="Upload medical file"
-                      disabled={isLoading}
-                    >
-                      <FaImage size={18} />
-                    </button>
-
-                    {showFileTypeMenu && (
-                      <div className="absolute bottom-12 right-0 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-48">
-                        <label
-                          className="flex items-center px-4 py-2 hover:bg-blue-50 cursor-pointer"
-                          title="Upload medical image (X-ray, MRI, etc.)"
-                        >
-                          <FaImage className="mr-2 text-blue-600" />
-                          <span>Medical Image</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                            className="hidden"
-                            ref={fileInputRef}
-                          />
-                        </label>
-                        <label
-                          className="flex items-center px-4 py-2 hover:bg-blue-50 cursor-pointer"
-                          title="Upload medical report (PDF)"
-                        >
-                          <FaFilePdf className="mr-2 text-red-600" />
-                          <span>Medical Report</span>
-                          <input
-                            type="file"
-                            accept="application/pdf"
-                            onChange={handleFileChange}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={isLoading || (!message && !file)}
-                    className={`p-2 rounded-lg transition-all ${
-                      isLoading || (!message && !file)
-                        ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                        : "text-white bg-blue-600 hover:bg-blue-700 shadow-md"
-                    }`}
-                    title="Send message"
-                  >
-                    <FaPaperPlane size={18} />
-                  </button>
-                </div>
-              </div>
-            </form>
-
-            <div className="text-center mt-3 text-xs text-gray-500">
-              Dr. AI provides preliminary analysis only. For medical
-              emergencies, call your local emergency number.
+        {/* Chat Input */}
+        <div className="chat-input-container">
+          {image && (
+            <div className="image-preview-input">
+              <img src={URL.createObjectURL(image)} alt="preview" />
+              <button onClick={() => setImage(null)} className="remove-image">
+                <FiX />
+              </button>
             </div>
+          )}
+          
+          <div className="input-group">
+            <button 
+              className="attach-button"
+              onClick={handleImageClick}
+              title="Attach image"
+            >
+              <FiImage />
+            </button>
+            
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={(e) => setImage(e.target.files[0])}
+              accept="image/*"
+              style={{ display: 'none' }}
+            />
+            
+            <textarea
+              ref={textareaRef}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Message Student WebMind..."
+              rows="1"
+            />
+            
+            <button 
+              onClick={sendMessage} 
+              disabled={isSending || (!message.trim() && !image)}
+              className="send-button"
+            >
+              {isSending ? (
+                <div className="spinner"></div>
+              ) : (
+                <FiSend />
+              )}
+            </button>
           </div>
-        </footer>
+          <div className="input-footer">
+            <p>Student WebMind can make mistakes. Consider checking important information.</p>
+          </div>
+        </div>
       </div>
+
+      {/* Overlay for mobile when sidebar is open */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={toggleSidebar}></div>
+      )}
     </div>
   );
 }
+
+export default DoctorChat;
+
+// CSS (ChatGPT-like styles)
+const styles = `
+.chat-app {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Theme Modes */
+.light-mode {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f7f8;
+  --bg-tertiary: #ececf1;
+  --text-primary: #343541;
+  --text-secondary: #6e6e80;
+  --border-color: #e5e5e5;
+  --user-bubble: #e9f2ff;
+  --user-text: #1a73e8;
+  --assistant-bubble: #f7f7f8;
+  --assistant-text: #343541;
+  --hover-color: #f0f0f0;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --button-primary: #1a73e8;
+  --button-hover: #1765cc;
+  --button-text: white;
+  --sidebar-bg: #f7f7f8;
+  --sidebar-text: #343541;
+  --sidebar-item-hover: #ececf1;
+  --sidebar-item-active: #e1e1e1;
+}
+
+.dark-mode {
+  --bg-primary: #343541;
+  --bg-secondary: #444654;
+  --bg-tertiary: #202123;
+  --text-primary: #ececf1;
+  --text-secondary: #c5c5d2;
+  --border-color: #4d4d4f;
+  --user-bubble: #1a73e8;
+  --user-text: white;
+  --assistant-bubble: #444654;
+  --assistant-text: #ececf1;
+  --hover-color: #40414f;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --button-primary: #1a73e8;
+  --button-hover: #1765cc;
+  --button-text: white;
+  --sidebar-bg: #202123;
+  --sidebar-text: #ececf1;
+  --sidebar-item-hover: #2a2b32;
+  --sidebar-item-active: #343541;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  width: 260px;
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-right: 1px solid var(--border-color);
+  transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.close-sidebar {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 20px;
+  display: none;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.new-chat {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  transition: background-color 0.2s;
+}
+
+.new-chat:hover {
+  background-color: var(--sidebar-item-hover);
+}
+
+.chat-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-date {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-left: 8px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: background-color 0.2s;
+}
+
+.history-item:hover {
+  background-color: var(--sidebar-item-hover);
+}
+
+.history-item.active {
+  background-color: var(--sidebar-item-active);
+}
+
+.history-item svg {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.theme-toggle {
+  width: 100%;
+  padding: 10px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.theme-toggle:hover {
+  background-color: var(--sidebar-item-hover);
+}
+
+/* Main Chat Area */
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-primary);
+  position: relative;
+}
+
+.mobile-header {
+  display: none;
+  padding: 16px;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  align-items: center;
+}
+
+.mobile-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.menu-button {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 20px;
+  cursor: pointer;
+  margin-right: 16px;
+}
+
+/* Chat Messages */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.welcome-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 24px;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.welcome-icon {
+  font-size: 48px;
+  margin-bottom: 24px;
+  color: var(--button-primary);
+  background-color: var(--bg-secondary);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.welcome-screen h1 {
+  font-size: 32px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.welcome-screen p {
+  font-size: 16px;
+  margin-bottom: 32px;
+  color: var(--text-secondary);
+}
+
+.example-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.example-prompt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.example-prompt:hover {
+  background-color: var(--hover-color);
+}
+
+.example-prompt svg {
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+.message {
+  display: flex;
+  padding: 24px 16px;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.message:hover {
+  background-color: var(--hover-color);
+}
+
+.user-message {
+  background-color: var(--bg-primary);
+}
+
+.assistant-message {
+  background-color: var(--bg-secondary);
+}
+
+.message-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin-right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  background-color: var(--user-bubble);
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.assistant-avatar {
+  background-color: var(--button-primary);
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message-content {
+  flex: 1;
+  max-width: calc(100% - 50px);
+}
+
+.message-header {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.message-body {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.message-body p {
+  margin: 0 0 12px 0;
+}
+
+.message-body p:last-child {
+  margin-bottom: 0;
+}
+
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  font-size: 24px;
+  color: var(--text-secondary);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+.image-section {
+  margin-top: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.image-preview {
+  margin-bottom: 16px;
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.image-analysis {
+  background-color: var(--bg-tertiary);
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  border-left: 3px solid var(--button-primary);
+}
+
+.image-analysis h4 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Chat Input */
+.chat-input-container {
+  padding: 16px;
+  background-color: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+}
+
+.image-preview-input {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.image-preview-input img {
+  max-width: 100%;
+  max-height: 150px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.remove-image {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.input-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 8px 16px;
+  box-shadow: 0 2px 6px var(--shadow-color);
+}
+
+.attach-button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attach-button:hover {
+  color: var(--button-primary);
+  background-color: var(--hover-color);
+}
+
+textarea {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  background: none;
+  resize: none;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--text-primary);
+  min-height: 24px;
+  max-height: 120px;
+  outline: none;
+}
+
+textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+.send-button {
+  background-color: var(--button-primary);
+  color: var(--button-text);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 16px;
+}
+
+.send-button:disabled {
+  background-color: var(--bg-tertiary);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.send-button:hover:not(:disabled) {
+  background-color: var(--button-hover);
+  transform: scale(1.05);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.input-footer {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Overlay for mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 20;
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .close-sidebar {
+    display: block;
+  }
+  
+  .mobile-header {
+    display: flex;
+  }
+  
+  .sidebar-overlay {
+    display: block;
+  }
+  
+  .chat-messages {
+    padding: 16px 0;
+  }
+  
+  .message {
+    padding: 16px 12px;
+  }
+  
+  .welcome-screen h1 {
+    font-size: 24px;
+  }
+  
+  .example-prompts {
+    max-width: 100%;
+  }
+}
+`;
+
+// Add styles to the document
+const styleElement = document.createElement('style');
+styleElement.innerHTML = styles;
+document.head.appendChild(styleElement);
