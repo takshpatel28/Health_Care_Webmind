@@ -1,44 +1,56 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { FiSend, FiImage, FiMenu, FiX } from 'react-icons/fi';
-import { BsRobot, BsPerson, BsLightbulb, BsThreeDots } from 'react-icons/bs';
+import { FiSend, FiImage, FiMenu, FiX, FiSun, FiMoon, FiTrash2, FiAlertTriangle } from 'react-icons/fi';
+import { BsRobot, BsPerson, BsLightbulb, BsPlus } from 'react-icons/bs';
+import { MdMedicalServices, MdOutlineSchool, MdDelete } from 'react-icons/md';
 
 function DoctorChat() {
   const [message, setMessage] = useState('');
   const [image, setImage] = useState(null);
-  const [chatHistory, setChatHistory] = useState([]);
   const [isSending, setIsSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
+  const [activeChatType, setActiveChatType] = useState('general');
+  const [chatInstances, setChatInstances] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState(null);
+  
+  // Store chats by ID
+  const [chats, setChats] = useState({});
+  
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
+  // Track newly created chats to prevent loading history
+  const [newlyCreatedChatId, setNewlyCreatedChatId] = useState(null);
+
+  // Initialize with a default chat
   useEffect(() => {
-    // Load chat history when component mounts
-    const loadChatHistory = async () => {
-      try {
-        const res = await axios.get('https://student-webmind.onrender.com/history');
-        // Only set chat history if there is data available
-        if (res.data.history && res.data.history.length > 0) {
-          setChatHistory(res.data.history);
-        }
-      } catch (error) {
-        console.error('Error loading chat history:', error);
-      }
-    };
-    
-    loadChatHistory();
+    if (chatInstances.length === 0) {
+      createNewChat();
+    }
   }, []);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory]);
+    if (activeChatId) {
+      // Only load chat history if this is not a newly created chat
+      if (activeChatId !== newlyCreatedChatId) {
+        loadChatHistory(activeChatId);
+      } else {
+        // Reset the newly created chat ID after it's been used
+        setNewlyCreatedChatId(null);
+      }
+    }
+  }, [activeChatId, activeChatType, newlyCreatedChatId]);
 
-  // Auto-resize textarea as user types
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chats, activeChatId]);
+
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = '24px';
@@ -46,23 +58,57 @@ function DoctorChat() {
     }
   }, [message]);
 
+  const loadChatHistory = async (chatId) => {
+    try {
+      setIsSending(true);
+      const res = await axios.get('https://student-webmind.onrender.com/history', {
+        params: { 
+          chatType: activeChatType,
+          chatId: chatId
+        }
+      });
+      
+      setChats(prev => ({
+        ...prev,
+        [chatId]: res.data.history || []
+      }));
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+      setChats(prev => ({
+        ...prev,
+        [chatId]: []
+      }));
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const sendMessage = async () => {
     if (!message.trim() && !image) return;
 
-    // Add user message to chat immediately for better UX
     const userMessage = {
       role: 'user',
       content: message,
-      image: image ? URL.createObjectURL(image) : null
+      image: image ? URL.createObjectURL(image) : null,
+      timestamp: new Date().toISOString(),
+      chatType: activeChatType
     };
     
-    setChatHistory(prev => [...prev, userMessage]);
+    // Update local state immediately
+    setChats(prev => ({
+      ...prev,
+      [activeChatId]: [...(prev[activeChatId] || []), userMessage]
+    }));
+    
     setIsSending(true);
     setIsTyping(true);
     setMessage('');
+    setImage(null);
     
     const formData = new FormData();
     formData.append('message', message);
+    formData.append('chatType', activeChatType);
+    formData.append('chatId', activeChatId);
     if (image) {
       formData.append('image', image);
     }
@@ -73,18 +119,177 @@ function DoctorChat() {
           'Content-Type': 'multipart/form-data'
         }
       });
-      setChatHistory(res.data.history);
-      setImage(null);
+      
+      setChats(prev => ({
+        ...prev,
+        [activeChatId]: res.data.history
+      }));
+      
+      // Update chat title based on first message
+      if (chatInstances.find(chat => chat.id === activeChatId)?.title === 'New Chat') {
+        const newTitle = message.substring(0, 20) + (message.length > 20 ? '...' : '');
+        setChatInstances(prev => 
+          prev.map(chat => 
+            chat.id === activeChatId 
+              ? { ...chat, title: newTitle } 
+              : chat
+          )
+        );
+      }
     } catch (err) {
       console.error('Error sending message:', err);
-      // Show error in chat
-      setChatHistory(prev => [...prev.slice(0, -1), {
-        role: 'assistant',
-        content: 'Sorry, I encountered an error processing your request. Please try again.'
-      }]);
+      setChats(prev => ({
+        ...prev,
+        [activeChatId]: [
+          ...(prev[activeChatId] || []),
+          {
+            role: 'assistant',
+            content: 'Sorry, I encountered an error processing your request. Please try again.',
+            timestamp: new Date().toISOString(),
+            chatType: activeChatType
+          }
+        ]
+      }));
     } finally {
       setIsSending(false);
       setIsTyping(false);
+    }
+  };
+
+  const createNewChat = () => {
+    const newChatId = Date.now().toString();
+    const newChat = {
+      id: newChatId,
+      type: activeChatType,
+      title: 'New Chat',
+      createdAt: new Date().toISOString()
+    };
+    
+    // Mark this as a newly created chat to prevent loading history
+    setNewlyCreatedChatId(newChatId);
+    
+    // Add to chat instances
+    setChatInstances(prev => [newChat, ...prev]);
+    setActiveChatId(newChatId);
+    
+    // Initialize empty messages
+    setChats(prev => ({
+      ...prev,
+      [newChatId]: []
+    }));
+    
+    // Clear the message input
+    setMessage('');
+    setImage(null);
+    
+    // Close the sidebar on mobile after creating new chat
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
+
+  const confirmDeleteChat = (chatId) => {
+    setChatToDelete(chatId);
+    setShowDeleteConfirm(true);
+  };
+
+  const deleteChatInstance = async () => {
+    if (!chatToDelete) return;
+    
+    try {
+      setIsSending(true);
+      
+      // Delete chat from the server first
+      await axios.delete('https://student-webmind.onrender.com/delete-chat', {
+        data: {
+          chatType: activeChatType,
+          chatId: chatToDelete
+        }
+      });
+      
+      // Remove chat from instances
+      setChatInstances(prev => prev.filter(chat => chat.id !== chatToDelete));
+      
+      // Remove from local state
+      setChats(prev => {
+        const newChats = {...prev};
+        delete newChats[chatToDelete];
+        return newChats;
+      });
+      
+      // If we're deleting the active chat, switch to another one or create new
+      if (activeChatId === chatToDelete) {
+        const remainingChats = chatInstances.filter(chat => chat.id !== chatToDelete);
+        if (remainingChats.length > 0) {
+          // Find the most recent chat of the same type
+          const sameTypeChats = remainingChats.filter(chat => chat.type === activeChatType);
+          if (sameTypeChats.length > 0) {
+            // Sort by creation date (newest first) and select the first one
+            const sortedChats = sameTypeChats.sort((a, b) => 
+              new Date(b.createdAt) - new Date(a.createdAt)
+            );
+            setActiveChatId(sortedChats[0].id);
+          } else {
+            // If no chats of the same type, create a new one
+            createNewChat();
+          }
+        } else {
+          // Create a new one if this was the last chat
+          createNewChat();
+        }
+      }
+      
+    } catch (err) {
+      console.error('Error deleting chat:', err);
+      alert('Failed to delete chat. Please try again.');
+    } finally {
+      setShowDeleteConfirm(false);
+      setChatToDelete(null);
+      setIsSending(false);
+    }
+  };
+
+  const deleteAllChats = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL chats? This cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      setIsSending(true);
+      
+      // Delete all chats for current chat type
+      const chatsToDelete = chatInstances.filter(chat => chat.type === activeChatType);
+      
+      // Perform deletion requests in parallel
+      await Promise.all(
+        chatsToDelete.map(chat => 
+          axios.delete('https://student-webmind.onrender.com/delete-chat', {
+            data: {
+              chatType: chat.type,
+              chatId: chat.id
+            }
+          }).catch(err => console.error(`Error deleting chat ${chat.id}:`, err))
+        )
+      );
+      
+      // Clear all chats of current type from state
+      setChatInstances(prev => prev.filter(chat => chat.type !== activeChatType));
+      
+      // Clear from local state
+      const newChats = {...chats};
+      chatsToDelete.forEach(chat => {
+        delete newChats[chat.id];
+      });
+      setChats(newChats);
+      
+      // Create a new chat
+      createNewChat();
+      
+    } catch (err) {
+      console.error('Error deleting all chats:', err);
+      alert('Failed to delete all chats. Please try again.');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -99,6 +304,12 @@ function DoctorChat() {
     fileInputRef.current.click();
   };
 
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setImage(e.target.files[0]);
+    }
+  };
+
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
@@ -107,184 +318,429 @@ function DoctorChat() {
     setDarkMode(!darkMode);
   };
 
-  const clearChat = async () => {
-    if (window.confirm('Are you sure you want to clear the chat history?')) {
-      try {
-        setIsSending(true);
-        // Clear chat history on server
-        await axios.post('http://localhost:5000/clear-history');
-        // Clear chat history on client
-        setChatHistory([]);
-      } catch (err) {
-        console.error('Error clearing chat history:', err);
-        alert('Failed to clear chat history. Please try again.');
-      } finally {
-        setIsSending(false);
+  const toggleDeleteMode = () => {
+    setDeleteMode(!deleteMode);
+  };
+
+  const selectChatType = (chatType) => {
+    if (activeChatType !== chatType) {
+      if (window.confirm('Switching chat type will create a new chat. Continue?')) {
+        setActiveChatType(chatType);
+        createNewChat();
       }
     }
   };
 
-  return (
-    <div className={`chat-app ${darkMode ? 'dark-mode' : 'light-mode'}`}>
-      {/* Sidebar */}
-      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <h3>Student WebMind</h3>
-          <button className="close-sidebar" onClick={toggleSidebar}>
-            <FiX />
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  const currentChatMessages = chats[activeChatId] || [];
+
+  // Modal for delete confirmation
+  const DeleteConfirmModal = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+      <div className={`p-6 rounded-lg shadow-xl max-w-md w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-full bg-red-100">
+            <FiAlertTriangle className="text-red-600 text-xl" />
+          </div>
+          <h3 className="text-xl font-bold">Delete Chat</h3>
+        </div>
+        <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          Are you sure you want to delete this chat? This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={deleteChatInstance}
+            className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
+          >
+            {isSending ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <FiTrash2 size={16} />
+            )}
+            Delete
           </button>
         </div>
-        
-        <div className="sidebar-content">
-          <button className="new-chat" onClick={clearChat}>
-            <span>+ New chat</span>
-          </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-800'}`}>
+      {/* Sidebar */}
+      <div className={`fixed md:relative z-30 w-72 h-full bg-gradient-to-b from-gray-800 to-gray-900 transition-all duration-300 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl`}>
+        <div className="flex flex-col h-full">
+          <div className="p-5 border-b border-gray-700 flex justify-between items-center">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <BsRobot className="text-blue-400" />
+              <span>Student WebMind</span>
+            </h3>
+            <button 
+              className="md:hidden text-gray-400 hover:text-white transition-colors"
+              onClick={toggleSidebar}
+            >
+              <FiX size={20} />
+            </button>
+          </div>
           
-          <div className="chat-history-list">
-            <div className="history-date">Today</div>
-            <div className="history-item active">
-              <BsLightbulb />
-              <span>Current Chat</span>
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex gap-2 mb-6">
+              <button 
+                onClick={createNewChat}
+                className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/20"
+              >
+                <BsPlus size={20} />
+                <span>New Chat</span>
+              </button>
+              
+              <button 
+                onClick={toggleDeleteMode}
+                className={`p-3 rounded-xl ${deleteMode 
+                  ? 'bg-red-600 hover:bg-red-700' 
+                  : 'bg-gray-700 hover:bg-gray-600'} 
+                  text-white transition-all duration-200 shadow-lg`}
+                title={deleteMode ? 'Exit delete mode' : 'Enter delete mode'}
+              >
+                <MdDelete size={20} />
+              </button>
+            </div>
+            
+            {chatInstances.filter(chat => chat.type === activeChatType).length > 0 && (
+              <button 
+                onClick={deleteAllChats}
+                className="w-full py-2 px-4 mb-4 rounded-xl bg-red-600/80 hover:bg-red-700 text-white font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
+              >
+                <FiTrash2 size={16} />
+                <span>Delete All Chats</span>
+              </button>
+            )}
+            
+            <div className="space-y-4">
+              <div className="text-xs text-gray-400 uppercase tracking-wider px-2 mb-1">Chat Options</div>
+              
+              <div 
+                className={`flex items-center gap-3 p-3 rounded-xl ${activeChatType === 'general' ? 'bg-gray-700 shadow-md' : 'bg-gray-800 hover:bg-gray-700'} text-white cursor-pointer transition-all duration-200 border border-gray-700`}
+                onClick={() => selectChatType('general')}
+              >
+                <div className={`p-2 rounded-lg ${activeChatType === 'general' ? 'bg-blue-500' : 'bg-gray-700'}`}>
+                  <MdOutlineSchool className="text-white" />
+                </div>
+                <div>
+                  <div className="font-medium">General Chat</div>
+                  <div className="text-xs text-gray-400">For general learning questions</div>
+                </div>
+              </div>
+              
+              <div 
+                className={`flex items-center gap-3 p-3 rounded-xl ${activeChatType === 'medical' ? 'bg-gray-700 shadow-md' : 'bg-gray-800 hover:bg-gray-700'} text-white cursor-pointer transition-all duration-200 border border-gray-700`}
+                onClick={() => selectChatType('medical')}
+              >
+                <div className={`p-2 rounded-lg ${activeChatType === 'medical' ? 'bg-green-500' : 'bg-gray-700'}`}>
+                  <MdMedicalServices className="text-white" />
+                </div>
+                <div>
+                  <div className="font-medium">Medical Consultation</div>
+                  <div className="text-xs text-gray-400">For health-related questions</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs text-gray-400 uppercase tracking-wider px-2">Recent Chats</div>
+                {deleteMode && (
+                  <div className="text-xs px-2 py-1 bg-red-500/20 text-red-400 rounded-md">
+                    Delete Mode
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-1">
+                {chatInstances
+                  .filter(chat => chat.type === activeChatType)
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .map(chat => (
+                    <div 
+                      key={chat.id}
+                      className={`flex items-center justify-between gap-2 p-3 rounded-xl cursor-pointer transition-all 
+                        ${activeChatId === chat.id ? 'bg-gray-700' : 'bg-gray-800 hover:bg-gray-700'}
+                        ${deleteMode ? 'border border-red-500/30' : ''}`}
+                      onClick={() => !deleteMode && setActiveChatId(chat.id)}
+                    >
+                      <div className="flex-1 truncate">
+                        <div className="font-medium truncate">{chat.title}</div>
+                        <div className="text-xs text-gray-400">{formatDate(chat.createdAt)}</div>
+                      </div>
+                      {deleteMode ? (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            confirmDeleteChat(chat.id);
+                          }}
+                          className="text-white bg-red-600 hover:bg-red-700 transition-colors p-2 rounded-lg"
+                        >
+                          <FiTrash2 size={16} />
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            confirmDeleteChat(chat.id);
+                          }}
+                          className="text-gray-400 hover:text-red-400 transition-colors p-1"
+                        >
+                          <FiTrash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+              </div>
+
+              {chatInstances.filter(chat => chat.type === activeChatType).length === 0 && (
+                <div className="text-center p-4 text-gray-500 text-sm">
+                  No chats yet. Create a new chat to get started.
+                </div>
+              )}
             </div>
           </div>
-        </div>
-        
-        <div className="sidebar-footer">
-          <button className="theme-toggle" onClick={toggleDarkMode}>
-            {darkMode ? 'Light Mode' : 'Dark Mode'}
-          </button>
+          
+          <div className="p-4 border-t border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm text-gray-400">Dark Mode</span>
+              <button 
+                onClick={toggleDarkMode}
+                className={`relative w-12 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none ${darkMode ? 'bg-blue-600' : 'bg-gray-600'}`}
+              >
+                <div className={`absolute w-4 h-4 rounded-full bg-white transform transition-transform duration-300 ${darkMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                {darkMode ? (
+                  <FiMoon className="text-white absolute left-1 top-1 text-xs" />
+                ) : (
+                  <FiSun className="text-yellow-300 absolute right-1 top-1 text-xs" />
+                )}
+              </button>
+            </div>
+            <div className="text-xs text-gray-500 text-center">
+              Student WebMind AI v1.0
+            </div>
+          </div>
         </div>
       </div>
       
       {/* Main Chat Area */}
-      <div className="chat-main">
+      <div className={`flex-1 flex flex-col h-full transition-colors duration-300 ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gray-50'}`}>
         {/* Mobile Header */}
-        <div className="mobile-header">
-          <button className="menu-button" onClick={toggleSidebar}>
-            <FiMenu />
+        <div className="md:hidden p-4 border-b border-gray-700 flex items-center bg-gray-800 shadow-sm">
+          <button 
+            className="text-gray-400 hover:text-white mr-4 transition-colors"
+            onClick={toggleSidebar}
+          >
+            <FiMenu size={20} />
           </button>
-          <h2>Student WebMind</h2>
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <BsRobot className="text-blue-400" />
+            <span>Student WebMind</span>
+          </h2>
+        </div>
+        
+        {/* Chat Header */}
+        <div className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between`}>
+          <h2 className="text-lg font-semibold">
+            {activeChatType === 'medical' ? 'Medical Consultation' : 'General Learning'}
+          </h2>
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-500">
+              {activeChatId && chatInstances.find(chat => chat.id === activeChatId)?.title}
+            </div>
+            {activeChatId && (
+              <button 
+                onClick={() => confirmDeleteChat(activeChatId)}
+                className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded-full hover:bg-gray-700"
+                title="Delete this chat"
+              >
+                <FiTrash2 size={16} />
+              </button>
+            )}
+          </div>
         </div>
         
         {/* Chat Messages */}
-        <div className="chat-messages">
-          {chatHistory.length === 0 ? (
-            <div className="welcome-screen">
-              <div className="welcome-icon">
-                <BsRobot />
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+          {currentChatMessages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center p-4">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-6 shadow-lg">
+                <BsRobot className="text-5xl text-white" />
               </div>
-              <h1>Student WebMind AI</h1>
-              <p>Your AI assistant for learning and image analysis</p>
-              <div className="example-prompts">
-                <div className="example-prompt">
-                  <BsLightbulb />
-                  <span>"Explain the concept of photosynthesis"</span>
+              <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+                Student WebMind AI
+              </h1>
+              <p className={`text-lg mb-8 max-w-md ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Your intelligent assistant for learning and medical consultation
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl">
+                <div 
+                  className={`p-4 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.02] ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 shadow-md'}`}
+                  onClick={() => setMessage('Explain the concept of photosynthesis')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-blue-500 text-white">
+                      <BsLightbulb size={18} />
+                    </div>
+                    <h3 className="font-medium">Learning Concepts</h3>
+                  </div>
+                  <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Ask about any academic topic or concept
+                  </p>
                 </div>
-                <div className="example-prompt">
-                  <BsLightbulb />
-                  <span>"Help me solve this math problem"</span>
+                
+                <div 
+                  className={`p-4 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.02] ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 shadow-md'}`}
+                  onClick={() => setMessage('Help me solve this math problem: 2x + 5 = 15')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-green-500 text-white">
+                      <MdOutlineSchool size={18} />
+                    </div>
+                    <h3 className="font-medium">Homework Help</h3>
+                  </div>
+                  <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Get step-by-step solutions to problems
+                  </p>
                 </div>
-                <div className="example-prompt">
-                  <BsLightbulb />
-                  <span>"Upload an image for analysis"</span>
+                
+                <div 
+                  className={`p-4 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.02] ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 shadow-md'}`}
+                  onClick={() => setMessage('What are the symptoms of flu?')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-red-500 text-white">
+                      <MdMedicalServices size={18} />
+                    </div>
+                    <h3 className="font-medium">Health Questions</h3>
+                  </div>
+                  <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Get information about symptoms and treatments
+                  </p>
                 </div>
               </div>
             </div>
           ) : (
-            <>
-              {chatHistory.map((msg, index) => (
-                <div 
-                  key={index} 
-                  className={`message ${msg.role === 'user' ? 'user-message' : 'assistant-message'}`}
-                >
-                  <div className="message-avatar">
-                    {msg.role === 'user' ? (
-                      <div className="user-avatar">
-                        <BsPerson />
-                      </div>
-                    ) : (
-                      <div className="assistant-avatar">
-                        <BsRobot />
+            <div className="space-y-6">
+              {currentChatMessages.map((msg, index) => (
+                <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-3xl rounded-2xl px-5 py-3 ${msg.role === 'user' 
+                      ? darkMode 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-blue-500 text-white'
+                      : darkMode 
+                        ? 'bg-gray-800 text-gray-100 border border-gray-700' 
+                        : 'bg-white text-gray-800 border border-gray-200'}`}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      {msg.role === 'user' ? (
+                        <BsPerson className="text-lg" />
+                      ) : (
+                        <BsRobot className="text-lg text-blue-400" />
+                      )}
+                      <span className="font-medium">
+                        {msg.role === 'user' ? 'You' : 'WebMind'}
+                      </span>
+                      <span className={`text-xs ${msg.role === 'user' ? 'text-blue-200' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        {formatTime(msg.timestamp)}
+                      </span>
+                    </div>
+                    
+                    <div className="whitespace-pre-wrap">
+                      {msg.content}
+                    </div>
+                    
+                    {msg.image && (
+                      <div className="mt-3">
+                        <img 
+                          src={msg.image} 
+                          alt="User attached" 
+                          className="max-w-full h-auto rounded-lg border border-gray-300"
+                        />
                       </div>
                     )}
-                  </div>
-                  <div className="message-content">
-                    <div className="message-header">
-                      <strong>{msg.role === 'user' ? 'You' : 'AI Assistant'}</strong>
-                    </div>
-                    <div className="message-body">
-                      {msg.content.split('\n').map((paragraph, i) => (
-                        <p key={i}>{paragraph}</p>
-                      ))}
-                      {msg.image && (
-                        <div className="image-section">
-                          <div className="image-preview">
-                            <img src={msg.image} alt="uploaded content" />
-                          </div>
-                          {msg.imageAnalysis && (
-                            <div className="image-analysis">
-                              <h4>Image Analysis:</h4>
-                              <p>{msg.imageAnalysis}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
               ))}
               
-              {/* Typing indicator */}
               {isTyping && (
-                <div className="message assistant-message">
-                  <div className="message-avatar">
-                    <div className="assistant-avatar">
-                      <BsRobot />
+                <div className="flex justify-start">
+                  <div className={`max-w-3xl rounded-2xl px-5 py-3 ${darkMode ? 'bg-gray-800 text-gray-100 border border-gray-700' : 'bg-white text-gray-800 border border-gray-200'}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <BsRobot className="text-lg text-blue-400" />
+                      <span className="font-medium">WebMind</span>
                     </div>
-                  </div>
-                  <div className="message-content">
-                    <div className="message-header">
-                      <strong>AI Assistant</strong>
-                    </div>
-                    <div className="message-body">
-                      <div className="typing-indicator">
-                        <BsThreeDots />
-                      </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
+                      <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                     </div>
                   </div>
                 </div>
               )}
-            </>
+              
+              <div ref={chatEndRef} />
+            </div>
           )}
-          <div ref={chatEndRef} />
         </div>
-
-        {/* Chat Input */}
-        <div className="chat-input-container">
+        
+        {/* Input Area */}
+        <div className={`p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           {image && (
-            <div className="image-preview-input">
-              <img src={URL.createObjectURL(image)} alt="preview" />
-              <button onClick={() => setImage(null)} className="remove-image">
-                <FiX />
+            <div className={`relative mb-3 p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} flex items-center justify-between`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded bg-gray-300 overflow-hidden">
+                  <img 
+                    src={URL.createObjectURL(image)} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <span className="text-sm truncate max-w-xs">{image.name}</span>
+              </div>
+              <button 
+                onClick={() => setImage(null)}
+                className="text-gray-500 hover:text-red-500 transition-colors"
+              >
+                <FiX size={18} />
               </button>
             </div>
           )}
           
-          <div className="input-group">
+          <div className={`flex items-end gap-2 p-2 rounded-xl ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
             <button 
-              className="attach-button"
               onClick={handleImageClick}
-              title="Attach image"
+              className={`p-2 rounded-lg ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
             >
-              <FiImage />
+              <FiImage size={20} />
             </button>
             
-            <input
-              type="file"
+            <input 
+              type="file" 
               ref={fileInputRef}
-              onChange={(e) => setImage(e.target.files[0])}
+              onChange={handleImageChange}
               accept="image/*"
-              style={{ display: 'none' }}
+              className="hidden"
             />
             
             <textarea
@@ -292,632 +748,35 @@ function DoctorChat() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Message Student WebMind..."
-              rows="1"
+              placeholder={`Type your ${activeChatType === 'medical' ? 'medical' : 'learning'} question here...`}
+              className={`flex-1 max-h-32 resize-none py-2 px-3 rounded-lg focus:outline-none ${darkMode ? 'bg-gray-800 text-white placeholder-gray-500' : 'bg-white text-gray-800 placeholder-gray-400'}`}
+              rows={1}
             />
             
-            <button 
-              onClick={sendMessage} 
+            <button
+              onClick={sendMessage}
               disabled={isSending || (!message.trim() && !image)}
-              className="send-button"
+              className={`p-3 rounded-lg ${(!message.trim() && !image) || isSending 
+                ? 'bg-gray-500 text-gray-300 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700 text-white'} transition-colors`}
             >
               {isSending ? (
-                <div className="spinner"></div>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                <FiSend />
+                <FiSend size={18} />
               )}
             </button>
           </div>
-          <div className="input-footer">
-            <p>Student WebMind can make mistakes. Consider checking important information.</p>
+          
+          <div className={`text-xs mt-2 text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            Student WebMind may produce inaccurate information. Use for educational purposes only.
           </div>
         </div>
       </div>
-
-      {/* Overlay for mobile when sidebar is open */}
-      {sidebarOpen && (
-        <div className="sidebar-overlay" onClick={toggleSidebar}></div>
-      )}
+      
+      {showDeleteConfirm && <DeleteConfirmModal />}
     </div>
   );
 }
 
 export default DoctorChat;
-
-// CSS (ChatGPT-like styles)
-const styles = `
-.chat-app {
-  display: flex;
-  height: 100vh;
-  width: 100%;
-  overflow: hidden;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* Theme Modes */
-.light-mode {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f7f7f8;
-  --bg-tertiary: #ececf1;
-  --text-primary: #343541;
-  --text-secondary: #6e6e80;
-  --border-color: #e5e5e5;
-  --user-bubble: #e9f2ff;
-  --user-text: #1a73e8;
-  --assistant-bubble: #f7f7f8;
-  --assistant-text: #343541;
-  --hover-color: #f0f0f0;
-  --shadow-color: rgba(0, 0, 0, 0.1);
-  --button-primary: #1a73e8;
-  --button-hover: #1765cc;
-  --button-text: white;
-  --sidebar-bg: #f7f7f8;
-  --sidebar-text: #343541;
-  --sidebar-item-hover: #ececf1;
-  --sidebar-item-active: #e1e1e1;
-}
-
-.dark-mode {
-  --bg-primary: #343541;
-  --bg-secondary: #444654;
-  --bg-tertiary: #202123;
-  --text-primary: #ececf1;
-  --text-secondary: #c5c5d2;
-  --border-color: #4d4d4f;
-  --user-bubble: #1a73e8;
-  --user-text: white;
-  --assistant-bubble: #444654;
-  --assistant-text: #ececf1;
-  --hover-color: #40414f;
-  --shadow-color: rgba(0, 0, 0, 0.3);
-  --button-primary: #1a73e8;
-  --button-hover: #1765cc;
-  --button-text: white;
-  --sidebar-bg: #202123;
-  --sidebar-text: #ececf1;
-  --sidebar-item-hover: #2a2b32;
-  --sidebar-item-active: #343541;
-}
-
-/* Sidebar Styles */
-.sidebar {
-  width: 260px;
-  background-color: var(--sidebar-bg);
-  color: var(--sidebar-text);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  border-right: 1px solid var(--border-color);
-  transition: transform 0.3s ease;
-}
-
-.sidebar-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.sidebar-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.close-sidebar {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 20px;
-  display: none;
-}
-
-.sidebar-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
-
-.new-chat {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: none;
-  color: var(--text-primary);
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 24px;
-  transition: background-color 0.2s;
-}
-
-.new-chat:hover {
-  background-color: var(--sidebar-item-hover);
-}
-
-.chat-history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.history-date {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-  padding-left: 8px;
-}
-
-.history-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--text-primary);
-  transition: background-color 0.2s;
-}
-
-.history-item:hover {
-  background-color: var(--sidebar-item-hover);
-}
-
-.history-item.active {
-  background-color: var(--sidebar-item-active);
-}
-
-.history-item svg {
-  font-size: 16px;
-  color: var(--text-secondary);
-}
-
-.sidebar-footer {
-  padding: 16px;
-  border-top: 1px solid var(--border-color);
-}
-
-.theme-toggle {
-  width: 100%;
-  padding: 10px;
-  background: none;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s;
-}
-
-.theme-toggle:hover {
-  background-color: var(--sidebar-item-hover);
-}
-
-/* Main Chat Area */
-.chat-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background-color: var(--bg-primary);
-  position: relative;
-}
-
-.mobile-header {
-  display: none;
-  padding: 16px;
-  background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
-  align-items: center;
-}
-
-.mobile-header h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.menu-button {
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font-size: 20px;
-  cursor: pointer;
-  margin-right: 16px;
-}
-
-/* Chat Messages */
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.welcome-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 0 24px;
-  text-align: center;
-  color: var(--text-primary);
-}
-
-.welcome-icon {
-  font-size: 48px;
-  margin-bottom: 24px;
-  color: var(--button-primary);
-  background-color: var(--bg-secondary);
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.welcome-screen h1 {
-  font-size: 32px;
-  margin-bottom: 16px;
-  font-weight: 600;
-}
-
-.welcome-screen p {
-  font-size: 16px;
-  margin-bottom: 32px;
-  color: var(--text-secondary);
-}
-
-.example-prompts {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  max-width: 600px;
-}
-
-.example-prompt {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background-color: var(--bg-secondary);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.example-prompt:hover {
-  background-color: var(--hover-color);
-}
-
-.example-prompt svg {
-  font-size: 18px;
-  color: var(--text-secondary);
-}
-
-.message {
-  display: flex;
-  padding: 24px 16px;
-  transition: background-color 0.2s;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.message:hover {
-  background-color: var(--hover-color);
-}
-
-.user-message {
-  background-color: var(--bg-primary);
-}
-
-.assistant-message {
-  background-color: var(--bg-secondary);
-}
-
-.message-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  margin-right: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.user-avatar {
-  background-color: var(--user-bubble);
-  color: white;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.assistant-avatar {
-  background-color: var(--button-primary);
-  color: white;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.message-content {
-  flex: 1;
-  max-width: calc(100% - 50px);
-}
-
-.message-header {
-  margin-bottom: 8px;
-  font-size: 14px;
-  color: var(--text-primary);
-}
-
-.message-body {
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--text-primary);
-}
-
-.message-body p {
-  margin: 0 0 12px 0;
-}
-
-.message-body p:last-child {
-  margin-bottom: 0;
-}
-
-.typing-indicator {
-  display: flex;
-  align-items: center;
-  font-size: 24px;
-  color: var(--text-secondary);
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% { opacity: 0.5; }
-  50% { opacity: 1; }
-  100% { opacity: 0.5; }
-}
-
-.image-section {
-  margin-top: 16px;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.image-preview {
-  margin-bottom: 16px;
-}
-
-.image-preview img {
-  max-width: 100%;
-  max-height: 300px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px var(--shadow-color);
-}
-
-.image-analysis {
-  background-color: var(--bg-tertiary);
-  padding: 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  border-left: 3px solid var(--button-primary);
-}
-
-.image-analysis h4 {
-  margin: 0 0 8px 0;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-/* Chat Input */
-.chat-input-container {
-  padding: 16px;
-  background-color: var(--bg-primary);
-  border-top: 1px solid var(--border-color);
-}
-
-.image-preview-input {
-  position: relative;
-  margin-bottom: 16px;
-}
-
-.image-preview-input img {
-  max-width: 100%;
-  max-height: 150px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px var(--shadow-color);
-}
-
-.remove-image {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 12px;
-  box-shadow: 0 2px 4px var(--shadow-color);
-}
-
-.input-group {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 8px 16px;
-  box-shadow: 0 2px 6px var(--shadow-color);
-}
-
-.attach-button {
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.attach-button:hover {
-  color: var(--button-primary);
-  background-color: var(--hover-color);
-}
-
-textarea {
-  flex: 1;
-  padding: 8px 0;
-  border: none;
-  background: none;
-  resize: none;
-  font-family: inherit;
-  font-size: 15px;
-  color: var(--text-primary);
-  min-height: 24px;
-  max-height: 120px;
-  outline: none;
-}
-
-textarea::placeholder {
-  color: var(--text-secondary);
-}
-
-.send-button {
-  background-color: var(--button-primary);
-  color: var(--button-text);
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 16px;
-}
-
-.send-button:disabled {
-  background-color: var(--bg-tertiary);
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.send-button:hover:not(:disabled) {
-  background-color: var(--button-hover);
-  transform: scale(1.05);
-}
-
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 1s ease-in-out infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.input-footer {
-  margin-top: 8px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-/* Overlay for mobile */
-.sidebar-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 10;
-}
-
-/* Responsive Styles */
-@media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    z-index: 20;
-    transform: translateX(-100%);
-  }
-  
-  .sidebar.open {
-    transform: translateX(0);
-  }
-  
-  .close-sidebar {
-    display: block;
-  }
-  
-  .mobile-header {
-    display: flex;
-  }
-  
-  .sidebar-overlay {
-    display: block;
-  }
-  
-  .chat-messages {
-    padding: 16px 0;
-  }
-  
-  .message {
-    padding: 16px 12px;
-  }
-  
-  .welcome-screen h1 {
-    font-size: 24px;
-  }
-  
-  .example-prompts {
-    max-width: 100%;
-  }
-}
-`;
-
-// Add styles to the document
-const styleElement = document.createElement('style');
-styleElement.innerHTML = styles;
-document.head.appendChild(styleElement);

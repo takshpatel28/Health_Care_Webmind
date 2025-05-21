@@ -29,22 +29,21 @@ const Sidebar = () => {
         const fetchUserRole = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                const { data } = await supabase
+                // Use single() instead of direct REST API calls to avoid 406 errors
+                const { data, error } = await supabase
                     .from('doctors')
-                    .select('role')
+                    .select('role, avatar_url')
                     .eq('id', session.user.id)
                     .single();
-                setUserRole(data?.role);
-            }
-
-            if (session?.user) {
-                const { data } = await supabase
-                    .from('doctors')
-                    .select('avatar_url')
-                    .eq('id', session.user.id)
-                    .single();
-
-                setProfileImg(data?.avatar_url);
+                
+                if (data) {
+                    setUserRole(data.role);
+                    setProfileImg(data.avatar_url);
+                }
+                
+                if (error) {
+                    console.error('Error fetching user data:', error);
+                }
             }
 
             setLoading(false);
@@ -56,12 +55,21 @@ const Sidebar = () => {
             if (session?.user) {
                 supabase
                     .from('doctors')
-                    .select('role')
+                    .select('role, avatar_url')
                     .eq('id', session.user.id)
                     .single()
-                    .then(({ data }) => setUserRole(data?.role));
+                    .then(({ data, error }) => {
+                        if (data) {
+                            setUserRole(data.role);
+                            setProfileImg(data.avatar_url);
+                        }
+                        if (error) {
+                            console.error('Error in auth state change:', error);
+                        }
+                    });
             } else {
                 setUserRole(null);
+                setProfileImg(null);
             }
         });
 
